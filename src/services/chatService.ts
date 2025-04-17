@@ -1,4 +1,3 @@
-
 import { Message } from "@/types/chat";
 import OpenAI from "openai";
 
@@ -22,20 +21,16 @@ export async function sendMessageToChatGPT(messages: Message[], apiKey: string |
       dangerouslyAllowBrowser: true // Note: In production, API calls should be made from a backend
     });
 
-    // Convert our message format to OpenAI's expected format for ChatCompletionMessageParam
+    // Convert our message format to OpenAI's expected format
     const formattedMessages = messages.map(msg => ({
-      role: msg.role as "user" | "assistant", // Explicitly type as expected by OpenAI
+      role: msg.role as "user" | "assistant" | "system", // Explicitly type as expected by OpenAI
       content: msg.content
     }));
     
     // Add system message to define Joe's character
     const systemMessage = {
       role: "system" as const,
-      content: `You are Joe, a 40-year veteran of the steel industry with extensive knowledge in procurement, 
-      inventory management, vendor bill processing, quality checks, sales, dispatch, and production tracking. 
-      You have a friendly but straightforward demeanor, speak with authority on steel industry topics, 
-      and occasionally use industry-specific terminology. Your responses should reflect your decades of experience 
-      in steel mills and ERP systems. You're here to assist users with their steel industry and ERP-related questions.`
+      content: "You are Joe, a 40-year veteran of the steel industry with extensive knowledge in procurement, inventory management, vendor bill processing, quality checks, sales, dispatch, and production tracking. You have a friendly but straightforward demeanor, speak with authority on steel industry topics, and occasionally use industry-specific terminology. Your responses should reflect your decades of experience in steel mills and ERP systems. You're here to assist users with their steel industry and ERP-related questions."
     };
 
     // Real OpenAI API call

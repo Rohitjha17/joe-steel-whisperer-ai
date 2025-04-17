@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useReducer, ReactNode, useEffect } from "react";
 import { ChatState, Message } from "@/types/chat";
 import { sendMessageToChatGPT } from "@/services/chatService";
+import { toast } from "@/components/ui/sonner";
 
 // Initial state
 const initialState: ChatState = {
@@ -108,9 +109,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "ADD_MESSAGE", payload: assistantMessage });
       dispatch({ type: "SET_ERROR", payload: null });
     } catch (error) {
-      dispatch({ 
-        type: "SET_ERROR", 
-        payload: error instanceof Error ? error.message : "Unknown error occurred" 
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      dispatch({ type: "SET_ERROR", payload: errorMessage });
+      toast.error("AI Response Error", {
+        description: errorMessage
       });
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });
@@ -125,6 +127,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   // Set API key
   const setApiKey = (key: string) => {
     dispatch({ type: "SET_API_KEY", payload: key });
+    toast.success(key ? "API Key Set" : "API Key Cleared", {
+      description: key ? "Using OpenAI API for responses" : "Using simulated responses"
+    });
   };
 
   return (
