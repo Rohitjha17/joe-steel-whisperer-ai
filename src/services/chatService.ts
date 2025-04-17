@@ -1,3 +1,4 @@
+
 import { Message } from "@/types/chat";
 import OpenAI from "openai";
 
@@ -23,7 +24,7 @@ export async function sendMessageToChatGPT(messages: Message[], apiKey: string |
 
     // Convert our message format to OpenAI's expected format
     const formattedMessages = messages.map(msg => ({
-      role: msg.role as "user" | "assistant" | "system", // Explicitly type as expected by OpenAI
+      role: msg.role as "user" | "assistant" | "system", // Type explicitly
       content: msg.content
     }));
     
@@ -43,6 +44,11 @@ export async function sendMessageToChatGPT(messages: Message[], apiKey: string |
       temperature: 0.7,
       max_tokens: 500,
     });
+
+    // Check if response is valid
+    if (!completion.choices || completion.choices.length === 0) {
+      throw new Error("No response received from OpenAI");
+    }
 
     return completion.choices[0].message.content || "I'm not sure how to respond to that.";
   } catch (error) {

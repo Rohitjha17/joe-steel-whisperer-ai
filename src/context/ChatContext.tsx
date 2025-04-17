@@ -114,6 +114,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       toast.error("AI Response Error", {
         description: errorMessage
       });
+      console.error("Chat error:", error);
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });
     }
