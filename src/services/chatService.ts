@@ -2,18 +2,26 @@
 import { Message } from "@/types/chat";
 import OpenAI from "openai";
 
-// This would be your actual API key in a production environment
-// For security, this should be stored in environment variables on the server side
-const API_KEY = "YOUR_OPENAI_API_KEY";
-
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: API_KEY,
-  dangerouslyAllowBrowser: true // Note: In production, API calls should be made from a backend
-});
-
-export async function sendMessageToChatGPT(messages: Message[]): Promise<string> {
+export async function sendMessageToChatGPT(messages: Message[], apiKey: string | null): Promise<string> {
   try {
+    // If no API key is provided, use simulated responses
+    if (!apiKey) {
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Get the last user message for context
+      const lastUserMessage = messages[messages.length - 1].content;
+      
+      // Generate a simulated response based on the last user message
+      return generateSimulatedResponse(lastUserMessage);
+    }
+
+    // Initialize OpenAI client with the provided API key
+    const openai = new OpenAI({
+      apiKey: apiKey,
+      dangerouslyAllowBrowser: true // Note: In production, API calls should be made from a backend
+    });
+
     // Convert our message format to OpenAI's format
     const formattedMessages = messages.map(msg => ({
       role: msg.role,
@@ -30,13 +38,9 @@ export async function sendMessageToChatGPT(messages: Message[]): Promise<string>
       in steel mills and ERP systems. You're here to assist users with their steel industry and ERP-related questions.`
     };
 
-    // For demonstration/development purposes, we'll use a simulated response
-    // In production with an API key, use the commented code below
-    
-    /* 
     // Real OpenAI API call
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         systemMessage,
         ...formattedMessages
@@ -46,24 +50,13 @@ export async function sendMessageToChatGPT(messages: Message[]): Promise<string>
     });
 
     return completion.choices[0].message.content || "I'm not sure how to respond to that.";
-    */
-    
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Get the last user message for context
-    const lastUserMessage = messages[messages.length - 1].content;
-    
-    // Generate a simulated response based on the last user message
-    return generateSimulatedResponse(lastUserMessage);
   } catch (error) {
     console.error("Error sending message to ChatGPT:", error);
     throw new Error("Failed to get response from AI assistant");
   }
 }
 
-// This function simulates responses for demo purposes
-// In production, this would be replaced by actual API calls
+// This function simulates responses for demo purposes when no API key is provided
 function generateSimulatedResponse(userMessage: string): string {
   const userMessageLower = userMessage.toLowerCase();
   

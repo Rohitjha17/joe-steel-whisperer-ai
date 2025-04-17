@@ -8,6 +8,7 @@ import { ExpertiseArea } from "./chat/ExpertiseArea";
 import { expertiseAreas } from "@/data/expertiseData";
 import { Button } from "@/components/ui/button";
 import { Trash2, RefreshCw } from "lucide-react";
+import { ApiKeyInput } from "./ApiKeyInput";
 
 export function SteelChatbot() {
   const { state, sendMessage, clearChat } = useChat();
@@ -24,6 +25,7 @@ export function SteelChatbot() {
             <p className="text-steel-200">40 years of steel industry experience at your service</p>
           </div>
           <div className="flex gap-2">
+            <ApiKeyInput />
             <Button
               variant="outline"
               size="icon"

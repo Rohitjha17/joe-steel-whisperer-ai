@@ -10,6 +10,7 @@ export interface ChatState {
   messages: Message[];
   isLoading: boolean;
   error: string | null;
+  apiKey: string | null;
 }
 
 export type ExpertiseArea = 

@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useReducer, ReactNode } from "react";
+import React, { createContext, useContext, useReducer, ReactNode, useEffect } from "react";
 import { ChatState, Message } from "@/types/chat";
 import { sendMessageToChatGPT } from "@/services/chatService";
 
@@ -8,6 +8,7 @@ const initialState: ChatState = {
   messages: [],
   isLoading: false,
   error: null,
+  apiKey: localStorage.getItem("chatgpt_api_key") || null,
 };
 
 // Action types
@@ -15,7 +16,8 @@ type ChatAction =
   | { type: "ADD_MESSAGE"; payload: Message }
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "SET_ERROR"; payload: string | null }
-  | { type: "CLEAR_CHAT" };
+  | { type: "CLEAR_CHAT" }
+  | { type: "SET_API_KEY"; payload: string | null };
 
 // Reducer function
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
@@ -40,6 +42,11 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ...state,
         messages: [],
       };
+    case "SET_API_KEY":
+      return {
+        ...state,
+        apiKey: action.payload,
+      };
     default:
       return state;
   }
@@ -50,6 +57,7 @@ interface ChatContextType {
   state: ChatState;
   sendMessage: (content: string) => Promise<void>;
   clearChat: () => void;
+  setApiKey: (key: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -57,6 +65,15 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 // Provider component
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(chatReducer, initialState);
+
+  // Save API key to localStorage when it changes
+  useEffect(() => {
+    if (state.apiKey) {
+      localStorage.setItem("chatgpt_api_key", state.apiKey);
+    } else {
+      localStorage.removeItem("chatgpt_api_key");
+    }
+  }, [state.apiKey]);
 
   // Send a message
   const sendMessage = async (content: string) => {
@@ -78,7 +95,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     try {
       // Get response from AI
       const messages = [...state.messages, userMessage];
-      const response = await sendMessageToChatGPT(messages);
+      const response = await sendMessageToChatGPT(messages, state.apiKey);
       
       // Add AI response to state
       const assistantMessage: Message = {
@@ -105,8 +122,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "CLEAR_CHAT" });
   };
 
+  // Set API key
+  const setApiKey = (key: string) => {
+    dispatch({ type: "SET_API_KEY", payload: key });
+  };
+
   return (
-    <ChatContext.Provider value={{ state, sendMessage, clearChat }}>
+    <ChatContext.Provider value={{ state, sendMessage, clearChat, setApiKey }}>
       {children}
     </ChatContext.Provider>
   );
