@@ -24,7 +24,7 @@ export async function sendMessageToChatGPT(messages: Message[], apiKey: string |
 
     // Convert our message format to OpenAI's expected format
     const formattedMessages = messages.map(msg => ({
-      role: msg.role as "user" | "assistant" | "system", // Type explicitly
+      role: msg.role as "user" | "assistant" | "system",
       content: msg.content
     }));
     
@@ -33,6 +33,12 @@ export async function sendMessageToChatGPT(messages: Message[], apiKey: string |
       role: "system" as const,
       content: "You are Joe, a 40-year veteran of the steel industry with extensive knowledge in procurement, inventory management, vendor bill processing, quality checks, sales, dispatch, and production tracking. You have a friendly but straightforward demeanor, speak with authority on steel industry topics, and occasionally use industry-specific terminology. Your responses should reflect your decades of experience in steel mills and ERP systems. You're here to assist users with their steel industry and ERP-related questions."
     };
+
+    console.log("Sending request to OpenAI with:", {
+      model: "gpt-4o-mini",
+      messages: [systemMessage, ...formattedMessages],
+      apiKey: apiKey ? "Valid API key provided" : "No API key"
+    });
 
     // Real OpenAI API call
     const completion = await openai.chat.completions.create({
@@ -45,15 +51,30 @@ export async function sendMessageToChatGPT(messages: Message[], apiKey: string |
       max_tokens: 500,
     });
 
+    console.log("OpenAI API response:", completion);
+
     // Check if response is valid
     if (!completion.choices || completion.choices.length === 0) {
       throw new Error("No response received from OpenAI");
     }
 
-    return completion.choices[0].message.content || "I'm not sure how to respond to that.";
+    const content = completion.choices[0].message.content;
+    if (!content) {
+      throw new Error("Empty response content from OpenAI");
+    }
+
+    return content;
   } catch (error) {
     console.error("Error sending message to ChatGPT:", error);
-    throw new Error("Failed to get response from AI assistant");
+    
+    // Extract more detailed error information
+    const errorMessage = error instanceof Error 
+      ? `${error.name}: ${error.message}` 
+      : "Unknown error occurred";
+      
+    console.error("Detailed error:", errorMessage);
+    
+    throw new Error(`Failed to get response from AI assistant: ${errorMessage}`);
   }
 }
 

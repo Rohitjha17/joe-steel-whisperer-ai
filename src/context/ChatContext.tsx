@@ -94,9 +94,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "SET_LOADING", payload: true });
     
     try {
+      console.log("Sending message to AI with API key:", state.apiKey ? "API key provided" : "No API key");
+      
       // Get response from AI
       const messages = [...state.messages, userMessage];
       const response = await sendMessageToChatGPT(messages, state.apiKey);
+      
+      console.log("Received AI response:", response);
       
       // Add AI response to state
       const assistantMessage: Message = {
@@ -111,9 +115,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       dispatch({ type: "SET_ERROR", payload: errorMessage });
+      
       toast.error("AI Response Error", {
         description: errorMessage
       });
+      
       console.error("Chat error:", error);
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });
@@ -131,6 +137,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     toast.success(key ? "API Key Set" : "API Key Cleared", {
       description: key ? "Using OpenAI API for responses" : "Using simulated responses"
     });
+    console.log("API key " + (key ? "set" : "cleared"));
   };
 
   return (
