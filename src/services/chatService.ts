@@ -22,15 +22,15 @@ export async function sendMessageToChatGPT(messages: Message[], apiKey: string |
       dangerouslyAllowBrowser: true // Note: In production, API calls should be made from a backend
     });
 
-    // Convert our message format to OpenAI's format
+    // Convert our message format to OpenAI's expected format for ChatCompletionMessageParam
     const formattedMessages = messages.map(msg => ({
-      role: msg.role,
+      role: msg.role as "user" | "assistant", // Explicitly type as expected by OpenAI
       content: msg.content
     }));
     
     // Add system message to define Joe's character
     const systemMessage = {
-      role: "system",
+      role: "system" as const,
       content: `You are Joe, a 40-year veteran of the steel industry with extensive knowledge in procurement, 
       inventory management, vendor bill processing, quality checks, sales, dispatch, and production tracking. 
       You have a friendly but straightforward demeanor, speak with authority on steel industry topics, 
