@@ -38,14 +38,18 @@ export const processText = (text: string, chunkSize = 1000, overlap = 200): stri
 // Process a PDF file and extract the text content using PDF.js (browser-compatible)
 export const processPDF = async (pdfBuffer: ArrayBuffer): Promise<string[]> => {
   try {
+    console.log("Starting PDF processing with PDF.js...");
+    
     // Load the PDF document using PDF.js
     const loadingTask = pdfjs.getDocument({ data: pdfBuffer });
     const pdf = await loadingTask.promise;
     
+    console.log(`PDF loaded successfully. Pages: ${pdf.numPages}`);
     let fullText = '';
     
     // Iterate through each page and extract text
     for (let i = 1; i <= pdf.numPages; i++) {
+      console.log(`Processing page ${i}/${pdf.numPages}...`);
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
       const pageText = textContent.items
@@ -55,11 +59,15 @@ export const processPDF = async (pdfBuffer: ArrayBuffer): Promise<string[]> => {
       fullText += pageText + ' ';
     }
     
+    console.log(`PDF text extraction complete. Text length: ${fullText.length}`);
+    
     // Process the extracted text into chunks
-    return processText(fullText);
+    const chunks = processText(fullText);
+    console.log(`Created ${chunks.length} text chunks from PDF`);
+    return chunks;
   } catch (error) {
     console.error("Error processing PDF:", error);
-    throw new Error("Failed to process PDF file");
+    throw new Error(`Failed to process PDF file: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 

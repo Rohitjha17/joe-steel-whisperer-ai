@@ -14,6 +14,7 @@ export function KnowledgeUploader() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<"idle" | "success" | "error">("idle");
   const [documentCount, setDocumentCount] = useState(getDocumentCount());
+  const [currentFileProgress, setCurrentFileProgress] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { state } = useChat();
 
@@ -37,41 +38,64 @@ export function KnowledgeUploader() {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileName = file.name;
+        setCurrentFileProgress(`Processing ${fileName} (${i + 1}/${files.length})`);
         const fileExtension = fileName.split('.').pop()?.toLowerCase();
         
         // Generate a unique ID for each file
         const fileId = `doc-${Date.now()}-${i}`;
         
+        console.log(`Processing file: ${fileName}, type: ${fileExtension}`);
+        
         if (fileExtension === 'pdf') {
-          const fileBuffer = await file.arrayBuffer();
-          const chunks = await processPDF(fileBuffer);
-          
-          // Add each chunk to documentChunks
-          chunks.forEach((chunk, index) => {
-            documentChunks.push({
-              id: `${fileId}-chunk-${index}`,
-              text: chunk,
-              metadata: {
-                source: fileName,
-                section: `Chunk ${index + 1}`
-              }
+          try {
+            const fileBuffer = await file.arrayBuffer();
+            console.log(`PDF file size: ${fileBuffer.byteLength} bytes`);
+            const chunks = await processPDF(fileBuffer);
+            
+            // Add each chunk to documentChunks
+            chunks.forEach((chunk, index) => {
+              documentChunks.push({
+                id: `${fileId}-chunk-${index}`,
+                text: chunk,
+                metadata: {
+                  source: fileName,
+                  section: `Chunk ${index + 1}`
+                }
+              });
             });
-          });
+            
+            console.log(`Successfully processed PDF: ${fileName}, generated ${chunks.length} chunks`);
+          } catch (pdfError) {
+            console.error(`Error processing PDF file ${fileName}:`, pdfError);
+            toast.error(`Error Processing PDF: ${fileName}`, {
+              description: pdfError instanceof Error ? pdfError.message : "Failed to process PDF file"
+            });
+          }
         } else if (fileExtension === 'txt') {
-          const text = await file.text();
-          const chunks = processText(text);
-          
-          // Add each chunk to documentChunks
-          chunks.forEach((chunk, index) => {
-            documentChunks.push({
-              id: `${fileId}-chunk-${index}`,
-              text: chunk,
-              metadata: {
-                source: fileName,
-                section: `Chunk ${index + 1}`
-              }
+          try {
+            const text = await file.text();
+            console.log(`TXT file length: ${text.length} characters`);
+            const chunks = processText(text);
+            
+            // Add each chunk to documentChunks
+            chunks.forEach((chunk, index) => {
+              documentChunks.push({
+                id: `${fileId}-chunk-${index}`,
+                text: chunk,
+                metadata: {
+                  source: fileName,
+                  section: `Chunk ${index + 1}`
+                }
+              });
             });
-          });
+            
+            console.log(`Successfully processed TXT: ${fileName}, generated ${chunks.length} chunks`);
+          } catch (txtError) {
+            console.error(`Error processing TXT file ${fileName}:`, txtError);
+            toast.error(`Error Processing TXT: ${fileName}`, {
+              description: txtError instanceof Error ? txtError.message : "Failed to process text file"
+            });
+          }
         } else {
           toast.error("Unsupported File Type", {
             description: `The file ${fileName} is not supported. Please upload PDF or TXT files only.`
@@ -81,11 +105,17 @@ export function KnowledgeUploader() {
       }
       
       if (documentChunks.length > 0) {
+        console.log(`Storing ${documentChunks.length} document chunks in vector database...`);
         await storeDocuments(documentChunks, state.apiKey);
         setDocumentCount(getDocumentCount());
         setUploadStatus("success");
         toast.success("Documents Processed", {
           description: `${documentChunks.length} chunks were successfully added to Joe's knowledge base`
+        });
+      } else {
+        setUploadStatus("error");
+        toast.error("No Content Processed", {
+          description: "No valid content could be extracted from the uploaded files."
         });
       }
     } catch (error) {
@@ -96,6 +126,7 @@ export function KnowledgeUploader() {
       });
     } finally {
       setIsProcessing(false);
+      setCurrentFileProgress(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -150,9 +181,14 @@ export function KnowledgeUploader() {
       </div>
       
       {isProcessing && (
-        <div className="flex items-center justify-center p-4 border rounded-md bg-steel-50">
-          <Loader2 className="h-5 w-5 animate-spin text-steel-500 mr-2" />
-          <span className="text-sm text-steel-700">Processing documents...</span>
+        <div className="flex flex-col items-center justify-center p-4 border rounded-md bg-steel-50">
+          <div className="flex items-center mb-2">
+            <Loader2 className="h-5 w-5 animate-spin text-steel-500 mr-2" />
+            <span className="text-sm text-steel-700">Processing documents...</span>
+          </div>
+          {currentFileProgress && (
+            <span className="text-xs text-steel-600">{currentFileProgress}</span>
+          )}
         </div>
       )}
       
@@ -171,7 +207,7 @@ export function KnowledgeUploader() {
           <AlertTriangle className="h-4 w-4 text-red-600" />
           <AlertTitle className="text-red-800">Processing Error</AlertTitle>
           <AlertDescription className="text-red-700">
-            There was an error processing your documents. Please try again.
+            There was an error processing your documents. Please check the console for details and try again.
           </AlertDescription>
         </Alert>
       )}
