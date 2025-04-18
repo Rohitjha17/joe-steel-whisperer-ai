@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useChat } from "@/context/ChatContext";
 import { ChatWindow } from "./chat/ChatWindow";
 import { ChatInput } from "./chat/ChatInput";
@@ -7,11 +7,14 @@ import { JoeAvatar } from "./chat/JoeAvatar";
 import { ExpertiseArea } from "./chat/ExpertiseArea";
 import { expertiseAreas } from "@/data/expertiseData";
 import { Button } from "@/components/ui/button";
-import { Trash2, RefreshCw } from "lucide-react";
+import { Trash2, RefreshCw, Database, MessageSquare } from "lucide-react";
 import { ApiKeyInput } from "./ApiKeyInput";
+import { KnowledgeUploader } from "./KnowledgeUploader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function SteelChatbot() {
   const { state, sendMessage, clearChat } = useChat();
+  const [activeTab, setActiveTab] = useState<"chat" | "knowledge">("chat");
   
   return (
     <div className="flex flex-col h-full lg:flex-row gap-6">
@@ -49,11 +52,30 @@ export function SteelChatbot() {
           </div>
         </div>
         
-        {/* Chat Messages */}
-        <ChatWindow messages={state.messages} isLoading={state.isLoading} />
-        
-        {/* Input Area */}
-        <ChatInput onSendMessage={sendMessage} isLoading={state.isLoading} />
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "chat" | "knowledge")}>
+          <TabsList className="w-full grid grid-cols-2 bg-steel-100">
+            <TabsTrigger value="chat" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              <span>Chat with Joe</span>
+            </TabsTrigger>
+            <TabsTrigger value="knowledge" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              <span>Knowledge Base</span>
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="chat" className="flex flex-col flex-1 overflow-hidden">
+            {/* Chat Messages */}
+            <ChatWindow messages={state.messages} isLoading={state.isLoading} />
+            
+            {/* Input Area */}
+            <ChatInput onSendMessage={sendMessage} isLoading={state.isLoading} />
+          </TabsContent>
+          
+          <TabsContent value="knowledge" className="flex-1 overflow-y-auto">
+            <KnowledgeUploader />
+          </TabsContent>
+        </Tabs>
       </div>
       
       {/* Sidebar with Expertise Areas */}
@@ -73,21 +95,30 @@ export function SteelChatbot() {
             <Button 
               variant="outline" 
               className="justify-start text-left text-sm border-steel-200 hover:bg-steel-100" 
-              onClick={() => sendMessage("What's the best way to manage steel inventory?")}
+              onClick={() => {
+                setActiveTab("chat");
+                sendMessage("What's the best way to manage steel inventory?");
+              }}
             >
               How to manage steel inventory?
             </Button>
             <Button 
               variant="outline" 
               className="justify-start text-left text-sm border-steel-200 hover:bg-steel-100" 
-              onClick={() => sendMessage("What quality checks are critical for steel production?")}
+              onClick={() => {
+                setActiveTab("chat");
+                sendMessage("What quality checks are critical for steel production?");
+              }}
             >
               Critical quality checks?
             </Button>
             <Button 
               variant="outline" 
               className="justify-start text-left text-sm border-steel-200 hover:bg-steel-100" 
-              onClick={() => sendMessage("How can ERP systems help in steel production tracking?")}
+              onClick={() => {
+                setActiveTab("chat");
+                sendMessage("How can ERP systems help in steel production tracking?");
+              }}
             >
               ERP for production tracking?
             </Button>

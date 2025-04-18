@@ -1,6 +1,7 @@
 
 import { Message } from "@/types/chat";
 import OpenAI from "openai";
+import { searchDocuments } from "./vectorService";
 
 export async function sendMessageToChatGPT(messages: Message[], apiKey: string | null): Promise<string> {
   try {
@@ -22,17 +23,48 @@ export async function sendMessageToChatGPT(messages: Message[], apiKey: string |
       dangerouslyAllowBrowser: true // Note: In production, API calls should be made from a backend
     });
 
+    // Get the last user message for searching the knowledge base
+    const lastUserMessage = messages[messages.length - 1].content;
+    
+    // Search the vector database for relevant documents
+    const relevantDocuments = await searchDocuments(lastUserMessage, apiKey, 3);
+    
     // Convert our message format to OpenAI's expected format
     const formattedMessages = messages.map(msg => ({
       role: msg.role as "user" | "assistant" | "system",
       content: msg.content
     }));
     
-    // Add system message to define Joe's character
-    const systemMessage = {
-      role: "system" as const,
-      content: "You are Joe, a 40-year veteran of the steel industry with extensive knowledge in procurement, inventory management, vendor bill processing, quality checks, sales, dispatch, and production tracking. You have a friendly but straightforward demeanor, speak with authority on steel industry topics, and occasionally use industry-specific terminology. Your responses should reflect your decades of experience in steel mills and ERP systems. You're here to assist users with their steel industry and ERP-related questions."
-    };
+    // Create the system message with Joe's persona
+    const baseSystemMessage = 
+      "You are Joe, a 40-year veteran of the steel industry with extensive knowledge in procurement, " +
+      "inventory management, vendor bill processing, quality checks, sales, dispatch, and production tracking. " +
+      "You have a friendly but straightforward demeanor, speak with authority on steel industry topics, and " +
+      "occasionally use industry-specific terminology. Your responses should reflect your decades of " +
+      "experience in steel mills and ERP systems. You're here to assist users with their steel industry and ERP-related questions.";
+    
+    let systemMessage;
+    
+    // If we have relevant documents, include them in the system message
+    if (relevantDocuments.length > 0) {
+      const contextText = relevantDocuments.map(doc => {
+        return `Document: ${doc.metadata.source}, Section: ${doc.metadata.section || 'N/A'}\n${doc.text}\n\n`;
+      }).join('');
+      
+      systemMessage = {
+        role: "system" as const,
+        content: `${baseSystemMessage}\n\nUse the following information from internal documents to answer the user's questions. If the information doesn't fully answer the question, use your general knowledge but prioritize this information:\n\n${contextText}`
+      };
+      
+      console.log("Using RAG with relevant documents:", relevantDocuments.map(doc => doc.metadata.source));
+    } else {
+      systemMessage = {
+        role: "system" as const,
+        content: baseSystemMessage
+      };
+      
+      console.log("No relevant documents found, using standard ChatGPT response");
+    }
 
     console.log("Sending request to OpenAI with:", {
       model: "gpt-4o-mini",
@@ -61,6 +93,13 @@ export async function sendMessageToChatGPT(messages: Message[], apiKey: string |
     const content = completion.choices[0].message.content;
     if (!content) {
       throw new Error("Empty response content from OpenAI");
+    }
+
+    // If we used relevant documents, append source information
+    if (relevantDocuments.length > 0) {
+      const uniqueSources = [...new Set(relevantDocuments.map(doc => doc.metadata.source))];
+      const sourceInfo = `\n\n(Information sourced from: ${uniqueSources.join(', ')})`;
+      return content + sourceInfo;
     }
 
     return content;
