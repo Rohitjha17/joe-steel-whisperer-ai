@@ -86,16 +86,22 @@ export const generateEmbeddings = async (
     
     // Process chunks in batches to avoid rate limits
     for (let i = 0; i < chunks.length; i++) {
-      const response = await openai.embeddings.create({
-        model: "text-embedding-ada-002",
-        input: chunks[i],
-      });
-      
-      embeddings.push(response.data[0].embedding);
-      
-      // Simple delay to avoid rate limits
-      if (i < chunks.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 200));
+      try {
+        const response = await openai.embeddings.create({
+          model: "text-embedding-ada-002",
+          input: chunks[i],
+        });
+        
+        embeddings.push(response.data[0].embedding);
+        
+        // Simple delay to avoid rate limits
+        if (i < chunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      } catch (embeddingError) {
+        console.error(`Error generating embedding for chunk ${i}:`, embeddingError);
+        // Push an empty embedding to maintain array index alignment
+        embeddings.push(new Array(1536).fill(0));
       }
     }
     

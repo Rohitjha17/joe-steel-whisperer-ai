@@ -40,10 +40,15 @@ const cosineSimilarity = (vecA: number[], vecB: number[]): number => {
 
 // Initialize Pinecone client
 const initPinecone = (apiKey: string, environment: string) => {
-  return new Pinecone({
-    apiKey: apiKey,
-    environment: environment,
-  });
+  try {
+    return new Pinecone({
+      apiKey: apiKey,
+      environment: environment,
+    });
+  } catch (error) {
+    console.error("Error initializing Pinecone:", error);
+    throw new Error("Failed to initialize Pinecone client");
+  }
 };
 
 // Store document chunks in the vector database
@@ -66,72 +71,76 @@ export const storeDocuments = async (
         
         // Use the default index or specify one
         const indexName = "joe-knowledge";
-        const indexes = await pinecone.listIndexes();
         
-        // Check if index exists
-        if (!indexes.some(idx => idx.name === indexName)) {
-          console.log(`Index '${indexName}' doesn't exist in Pinecone. Using in-memory storage instead.`);
+        try {
+          const indexes = await pinecone.listIndexes();
+          
+          // Check if index exists
+          if (!indexes.some(idx => idx.name === indexName)) {
+            console.log(`Index '${indexName}' doesn't exist in Pinecone. Using in-memory storage instead.`);
+            // Fall back to in-memory storage
+            for (let i = 0; i < chunks.length; i++) {
+              inMemoryVectorDB.push({
+                id: chunks[i].id,
+                text: chunks[i].text,
+                embedding: embeddings[i],
+                metadata: chunks[i].metadata
+              });
+            }
+            return;
+          }
+          
+          const index = pinecone.index(indexName);
+          
+          // Prepare vectors for upsert
+          const vectors = chunks.map((chunk, i) => ({
+            id: chunk.id,
+            values: embeddings[i],
+            metadata: {
+              ...chunk.metadata,
+              text: chunk.text // Store text in metadata for retrieval
+            }
+          }));
+          
+          // Upsert in batches of 100 (Pinecone limit)
+          const batchSize = 100;
+          for (let i = 0; i < vectors.length; i += batchSize) {
+            const batch = vectors.slice(i, i + batchSize);
+            await index.upsert(batch);
+            console.log(`Upserted batch ${i / batchSize + 1} to Pinecone`);
+          }
+          
+          console.log(`Stored ${chunks.length} document chunks in Pinecone`);
+        } catch (indexError) {
+          console.error("Error accessing Pinecone indexes:", indexError);
           // Fall back to in-memory storage
-          for (let i = 0; i < chunks.length; i++) {
-            inMemoryVectorDB.push({
-              id: chunks[i].id,
-              text: chunks[i].text,
-              embedding: embeddings[i],
-              metadata: chunks[i].metadata
-            });
-          }
-          return;
+          storeInMemory(chunks, embeddings);
         }
-        
-        const index = pinecone.index(indexName);
-        
-        // Prepare vectors for upsert
-        const vectors = chunks.map((chunk, i) => ({
-          id: chunk.id,
-          values: embeddings[i],
-          metadata: {
-            ...chunk.metadata,
-            text: chunk.text // Store text in metadata for retrieval
-          }
-        }));
-        
-        // Upsert in batches of 100 (Pinecone limit)
-        const batchSize = 100;
-        for (let i = 0; i < vectors.length; i += batchSize) {
-          const batch = vectors.slice(i, i + batchSize);
-          await index.upsert(batch);
-          console.log(`Upserted batch ${i / batchSize + 1} to Pinecone`);
-        }
-        
-        console.log(`Stored ${chunks.length} document chunks in Pinecone`);
       } catch (pineconeError) {
         console.error("Error using Pinecone, falling back to in-memory storage:", pineconeError);
         // Fall back to in-memory storage
-        for (let i = 0; i < chunks.length; i++) {
-          inMemoryVectorDB.push({
-            id: chunks[i].id,
-            text: chunks[i].text,
-            embedding: embeddings[i],
-            metadata: chunks[i].metadata
-          });
-        }
+        storeInMemory(chunks, embeddings);
       }
     } else {
       // Store documents in memory (default fallback)
-      for (let i = 0; i < chunks.length; i++) {
-        inMemoryVectorDB.push({
-          id: chunks[i].id,
-          text: chunks[i].text,
-          embedding: embeddings[i],
-          metadata: chunks[i].metadata
-        });
-      }
-      
+      storeInMemory(chunks, embeddings);
       console.log(`Stored ${chunks.length} document chunks in in-memory vector database`);
     }
   } catch (error) {
     console.error("Error storing documents:", error);
     throw new Error("Failed to store documents in vector database");
+  }
+};
+
+// Helper function to store documents in memory
+const storeInMemory = (chunks: DocumentChunk[], embeddings: number[][]) => {
+  for (let i = 0; i < chunks.length; i++) {
+    inMemoryVectorDB.push({
+      id: chunks[i].id,
+      text: chunks[i].text,
+      embedding: embeddings[i],
+      metadata: chunks[i].metadata
+    });
   }
 };
 
@@ -164,32 +173,37 @@ export const searchDocuments = async (
         const indexName = "joe-knowledge";
         
         // Check if index exists
-        const indexes = await pinecone.listIndexes();
-        if (!indexes.some(idx => idx.name === indexName)) {
-          console.log(`Index '${indexName}' doesn't exist in Pinecone. Using in-memory search instead.`);
-          // Fall back to in-memory search
+        try {
+          const indexes = await pinecone.listIndexes();
+          if (!indexes.some(idx => idx.name === indexName)) {
+            console.log(`Index '${indexName}' doesn't exist in Pinecone. Using in-memory search instead.`);
+            // Fall back to in-memory search
+            return searchInMemory(queryEmbedding, topK);
+          }
+          
+          const index = pinecone.index(indexName);
+          
+          // Query Pinecone
+          const queryResponse = await index.query({
+            vector: queryEmbedding,
+            topK,
+            includeMetadata: true
+          });
+          
+          // Transform results
+          return queryResponse.matches.map(match => ({
+            id: match.id,
+            text: match.metadata?.text as string,
+            metadata: {
+              source: match.metadata?.source as string,
+              section: match.metadata?.section as string,
+              page: match.metadata?.page as number
+            }
+          }));
+        } catch (indexError) {
+          console.error("Error accessing Pinecone indexes:", indexError);
           return searchInMemory(queryEmbedding, topK);
         }
-        
-        const index = pinecone.index(indexName);
-        
-        // Query Pinecone
-        const queryResponse = await index.query({
-          vector: queryEmbedding,
-          topK,
-          includeMetadata: true
-        });
-        
-        // Transform results
-        return queryResponse.matches.map(match => ({
-          id: match.id,
-          text: match.metadata?.text as string,
-          metadata: {
-            source: match.metadata?.source as string,
-            section: match.metadata?.section as string,
-            page: match.metadata?.page as number
-          }
-        }));
       } catch (pineconeError) {
         console.error("Error searching Pinecone, falling back to in-memory search:", pineconeError);
         // Fall back to in-memory search
