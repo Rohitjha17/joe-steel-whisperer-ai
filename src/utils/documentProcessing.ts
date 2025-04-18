@@ -3,7 +3,7 @@ import { OpenAI } from "openai";
 import * as pdfjs from 'pdfjs-dist';
 
 // Set worker source for PDF.js
-const pdfWorkerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+const pdfWorkerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
 // Function to process and chunk text from a document
@@ -50,13 +50,18 @@ export const processPDF = async (pdfBuffer: ArrayBuffer): Promise<string[]> => {
     // Iterate through each page and extract text
     for (let i = 1; i <= pdf.numPages; i++) {
       console.log(`Processing page ${i}/${pdf.numPages}...`);
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map(item => 'str' in item ? item.str : '')
-        .join(' ');
-        
-      fullText += pageText + ' ';
+      try {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map(item => 'str' in item ? item.str : '')
+          .join(' ');
+          
+        fullText += pageText + ' ';
+      } catch (pageError) {
+        console.error(`Error processing page ${i}:`, pageError);
+        // Continue with other pages even if one fails
+      }
     }
     
     console.log(`PDF text extraction complete. Text length: ${fullText.length}`);
@@ -77,6 +82,10 @@ export const generateEmbeddings = async (
   apiKey: string
 ): Promise<number[][]> => {
   try {
+    if (!apiKey || apiKey.trim() === '') {
+      throw new Error("Valid API key is required for generating embeddings");
+    }
+    
     const openai = new OpenAI({
       apiKey: apiKey,
       dangerouslyAllowBrowser: true
@@ -108,6 +117,6 @@ export const generateEmbeddings = async (
     return embeddings;
   } catch (error) {
     console.error("Error generating embeddings:", error);
-    throw new Error("Failed to generate embeddings");
+    throw new Error("Failed to generate embeddings: " + (error instanceof Error ? error.message : "Unknown error"));
   }
 };

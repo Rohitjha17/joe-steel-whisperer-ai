@@ -153,69 +153,80 @@ export const searchDocuments = async (
   pineconeEnvironment?: string
 ): Promise<DocumentChunk[]> => {
   try {
-    // Generate embedding for the query
-    const openai = new OpenAI({
-      apiKey: apiKey,
-      dangerouslyAllowBrowser: true
-    });
+    // If API key is null or invalid, return empty results
+    if (!apiKey || apiKey.trim() === '') {
+      console.log("No API key provided for search, returning empty results");
+      return [];
+    }
     
-    const response = await openai.embeddings.create({
-      model: "text-embedding-ada-002",
-      input: query,
-    });
-    
-    const queryEmbedding = response.data[0].embedding;
-    
-    // If Pinecone credentials are provided, search in Pinecone
-    if (pineconeApiKey && pineconeEnvironment) {
-      try {
-        const pinecone = initPinecone(pineconeApiKey, pineconeEnvironment);
-        const indexName = "joe-knowledge";
-        
-        // Check if index exists
+    try {
+      // Generate embedding for the query
+      const openai = new OpenAI({
+        apiKey: apiKey,
+        dangerouslyAllowBrowser: true
+      });
+      
+      const response = await openai.embeddings.create({
+        model: "text-embedding-ada-002",
+        input: query,
+      });
+      
+      const queryEmbedding = response.data[0].embedding;
+      
+      // If Pinecone credentials are provided, search in Pinecone
+      if (pineconeApiKey && pineconeEnvironment) {
         try {
-          const indexes = await pinecone.listIndexes();
-          if (!indexes.some(idx => idx.name === indexName)) {
-            console.log(`Index '${indexName}' doesn't exist in Pinecone. Using in-memory search instead.`);
-            // Fall back to in-memory search
+          const pinecone = initPinecone(pineconeApiKey, pineconeEnvironment);
+          const indexName = "joe-knowledge";
+          
+          // Check if index exists
+          try {
+            const indexes = await pinecone.listIndexes();
+            if (!indexes.some(idx => idx.name === indexName)) {
+              console.log(`Index '${indexName}' doesn't exist in Pinecone. Using in-memory search instead.`);
+              // Fall back to in-memory search
+              return searchInMemory(queryEmbedding, topK);
+            }
+            
+            const index = pinecone.index(indexName);
+            
+            // Query Pinecone
+            const queryResponse = await index.query({
+              vector: queryEmbedding,
+              topK,
+              includeMetadata: true
+            });
+            
+            // Transform results
+            return queryResponse.matches.map(match => ({
+              id: match.id,
+              text: match.metadata?.text as string,
+              metadata: {
+                source: match.metadata?.source as string,
+                section: match.metadata?.section as string,
+                page: match.metadata?.page as number
+              }
+            }));
+          } catch (indexError) {
+            console.error("Error accessing Pinecone indexes:", indexError);
             return searchInMemory(queryEmbedding, topK);
           }
-          
-          const index = pinecone.index(indexName);
-          
-          // Query Pinecone
-          const queryResponse = await index.query({
-            vector: queryEmbedding,
-            topK,
-            includeMetadata: true
-          });
-          
-          // Transform results
-          return queryResponse.matches.map(match => ({
-            id: match.id,
-            text: match.metadata?.text as string,
-            metadata: {
-              source: match.metadata?.source as string,
-              section: match.metadata?.section as string,
-              page: match.metadata?.page as number
-            }
-          }));
-        } catch (indexError) {
-          console.error("Error accessing Pinecone indexes:", indexError);
+        } catch (pineconeError) {
+          console.error("Error searching Pinecone, falling back to in-memory search:", pineconeError);
+          // Fall back to in-memory search
           return searchInMemory(queryEmbedding, topK);
         }
-      } catch (pineconeError) {
-        console.error("Error searching Pinecone, falling back to in-memory search:", pineconeError);
-        // Fall back to in-memory search
+      } else {
+        // Search in-memory database
         return searchInMemory(queryEmbedding, topK);
       }
-    } else {
-      // Search in-memory database
-      return searchInMemory(queryEmbedding, topK);
+    } catch (openaiError) {
+      console.error("Error with OpenAI API:", openaiError);
+      return []; // Return empty results on OpenAI API error
     }
   } catch (error) {
     console.error("Error searching documents:", error);
-    throw new Error("Failed to search documents in vector database");
+    return []; // Return empty results instead of throwing
   }
 };
 

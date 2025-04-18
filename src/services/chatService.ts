@@ -17,108 +17,120 @@ export async function sendMessageToChatGPT(messages: Message[], apiKey: string |
       return generateSimulatedResponse(lastUserMessage);
     }
 
-    // Initialize OpenAI client with the provided API key
-    const openai = new OpenAI({
-      apiKey: apiKey,
-      dangerouslyAllowBrowser: true // Note: In production, API calls should be made from a backend
-    });
+    try {
+      // Initialize OpenAI client with the provided API key
+      const openai = new OpenAI({
+        apiKey: apiKey,
+        dangerouslyAllowBrowser: true // Note: In production, API calls should be made from a backend
+      });
 
-    // Get the last user message for searching the knowledge base
-    const lastUserMessage = messages[messages.length - 1].content;
-    
-    // Get Pinecone config from localStorage if available
-    const pineconeApiKey = localStorage.getItem("pinecone_api_key");
-    const pineconeEnvironment = localStorage.getItem("pinecone_environment");
-    const usePinecone = localStorage.getItem("use_pinecone") === "true";
-    
-    // Search the vector database for relevant documents
-    let relevantDocuments;
-    if (usePinecone && pineconeApiKey && pineconeEnvironment) {
-      relevantDocuments = await searchDocuments(
-        lastUserMessage, 
-        apiKey, 
-        3, 
-        pineconeApiKey, 
-        pineconeEnvironment
-      );
-    } else {
-      relevantDocuments = await searchDocuments(lastUserMessage, apiKey, 3);
-    }
-    
-    // Convert our message format to OpenAI's expected format
-    const formattedMessages = messages.map(msg => ({
-      role: msg.role as "user" | "assistant" | "system",
-      content: msg.content
-    }));
-    
-    // Create the system message with Joe's persona
-    const baseSystemMessage = 
-      "You are Joe, a 40-year veteran of the steel industry with extensive knowledge in procurement, " +
-      "inventory management, vendor bill processing, quality checks, sales, dispatch, and production tracking. " +
-      "You have a friendly but straightforward demeanor, speak with authority on steel industry topics, and " +
-      "occasionally use industry-specific terminology. Your responses should reflect your decades of " +
-      "experience in steel mills and ERP systems. You're here to assist users with their steel industry and ERP-related questions.";
-    
-    let systemMessage;
-    
-    // If we have relevant documents, include them in the system message
-    if (relevantDocuments.length > 0) {
-      const contextText = relevantDocuments.map(doc => {
-        return `Document: ${doc.metadata.source}, Section: ${doc.metadata.section || 'N/A'}\n${doc.text}\n\n`;
-      }).join('');
+      // Get the last user message for searching the knowledge base
+      const lastUserMessage = messages[messages.length - 1].content;
       
-      systemMessage = {
-        role: "system" as const,
-        content: `${baseSystemMessage}\n\nUse the following information from internal documents to answer the user's questions. If the information doesn't fully answer the question, use your general knowledge but prioritize this information:\n\n${contextText}`
-      };
+      // Get Pinecone config from localStorage if available
+      const pineconeApiKey = localStorage.getItem("pinecone_api_key");
+      const pineconeEnvironment = localStorage.getItem("pinecone_environment");
+      const usePinecone = localStorage.getItem("use_pinecone") === "true";
       
-      console.log("Using RAG with relevant documents:", relevantDocuments.map(doc => doc.metadata.source));
-    } else {
-      systemMessage = {
-        role: "system" as const,
-        content: baseSystemMessage
-      };
+      // Search the vector database for relevant documents - handle empty results gracefully
+      let relevantDocuments = [];
+      try {
+        if (usePinecone && pineconeApiKey && pineconeEnvironment) {
+          relevantDocuments = await searchDocuments(
+            lastUserMessage, 
+            apiKey, 
+            3, 
+            pineconeApiKey, 
+            pineconeEnvironment
+          );
+        } else {
+          relevantDocuments = await searchDocuments(lastUserMessage, apiKey, 3);
+        }
+      } catch (searchError) {
+        console.log("Error searching documents, proceeding without relevant documents", searchError);
+        relevantDocuments = [];
+      }
       
-      console.log("No relevant documents found, using standard ChatGPT response");
+      // Convert our message format to OpenAI's expected format
+      const formattedMessages = messages.map(msg => ({
+        role: msg.role as "user" | "assistant" | "system",
+        content: msg.content
+      }));
+      
+      // Create the system message with Joe's persona
+      const baseSystemMessage = 
+        "You are Joe, a 40-year veteran of the steel industry with extensive knowledge in procurement, " +
+        "inventory management, vendor bill processing, quality checks, sales, dispatch, and production tracking. " +
+        "You have a friendly but straightforward demeanor, speak with authority on steel industry topics, and " +
+        "occasionally use industry-specific terminology. Your responses should reflect your decades of " +
+        "experience in steel mills and ERP systems. You're here to assist users with their steel industry and ERP-related questions.";
+      
+      let systemMessage;
+      
+      // If we have relevant documents, include them in the system message
+      if (relevantDocuments.length > 0) {
+        const contextText = relevantDocuments.map(doc => {
+          return `Document: ${doc.metadata.source}, Section: ${doc.metadata.section || 'N/A'}\n${doc.text}\n\n`;
+        }).join('');
+        
+        systemMessage = {
+          role: "system" as const,
+          content: `${baseSystemMessage}\n\nUse the following information from internal documents to answer the user's questions. If the information doesn't fully answer the question, use your general knowledge but prioritize this information:\n\n${contextText}`
+        };
+        
+        console.log("Using RAG with relevant documents:", relevantDocuments.map(doc => doc.metadata.source));
+      } else {
+        systemMessage = {
+          role: "system" as const,
+          content: baseSystemMessage
+        };
+        
+        console.log("No relevant documents found, using standard ChatGPT response");
+      }
+
+      console.log("Sending request to OpenAI with:", {
+        model: "gpt-4o-mini",
+        messages: [systemMessage, ...formattedMessages],
+        apiKey: apiKey ? "Valid API key provided" : "No API key"
+      });
+
+      // Real OpenAI API call
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          systemMessage,
+          ...formattedMessages
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      });
+
+      console.log("OpenAI API response:", completion);
+
+      // Check if response is valid
+      if (!completion.choices || completion.choices.length === 0) {
+        throw new Error("No response received from OpenAI");
+      }
+
+      const content = completion.choices[0].message.content;
+      if (!content) {
+        throw new Error("Empty response content from OpenAI");
+      }
+
+      // If we used relevant documents, append source information
+      if (relevantDocuments.length > 0) {
+        const uniqueSources = [...new Set(relevantDocuments.map(doc => doc.metadata.source))];
+        const sourceInfo = `\n\n(Information sourced from: ${uniqueSources.join(', ')})`;
+        return content + sourceInfo;
+      }
+
+      return content;
+    } catch (openaiError) {
+      console.error("OpenAI API error:", openaiError);
+      // Fall back to simulated responses on API error
+      const lastUserMessage = messages[messages.length - 1].content;
+      return generateSimulatedResponse(lastUserMessage) + " (Note: Using simulated response due to API error)";
     }
-
-    console.log("Sending request to OpenAI with:", {
-      model: "gpt-4o-mini",
-      messages: [systemMessage, ...formattedMessages],
-      apiKey: apiKey ? "Valid API key provided" : "No API key"
-    });
-
-    // Real OpenAI API call
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        systemMessage,
-        ...formattedMessages
-      ],
-      temperature: 0.7,
-      max_tokens: 500,
-    });
-
-    console.log("OpenAI API response:", completion);
-
-    // Check if response is valid
-    if (!completion.choices || completion.choices.length === 0) {
-      throw new Error("No response received from OpenAI");
-    }
-
-    const content = completion.choices[0].message.content;
-    if (!content) {
-      throw new Error("Empty response content from OpenAI");
-    }
-
-    // If we used relevant documents, append source information
-    if (relevantDocuments.length > 0) {
-      const uniqueSources = [...new Set(relevantDocuments.map(doc => doc.metadata.source))];
-      const sourceInfo = `\n\n(Information sourced from: ${uniqueSources.join(', ')})`;
-      return content + sourceInfo;
-    }
-
-    return content;
   } catch (error) {
     console.error("Error sending message to ChatGPT:", error);
     
@@ -129,7 +141,8 @@ export async function sendMessageToChatGPT(messages: Message[], apiKey: string |
       
     console.error("Detailed error:", errorMessage);
     
-    throw new Error(`Failed to get response from AI assistant: ${errorMessage}`);
+    // Return a helpful message instead of throwing
+    return "I apologize, but I'm having trouble processing your request right now. Please check your API key or try again later.";
   }
 }
 
