@@ -1,6 +1,10 @@
 
 import { OpenAI } from "openai";
-import * as pdfParse from 'pdf-parse';
+import * as pdfjs from 'pdfjs-dist';
+
+// Set worker source for PDF.js
+const pdfWorkerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
 // Function to process and chunk text from a document
 export const processText = (text: string, chunkSize = 1000, overlap = 200): string[] => {
@@ -31,11 +35,28 @@ export const processText = (text: string, chunkSize = 1000, overlap = 200): stri
   return chunks;
 };
 
-// Process a PDF file and extract the text content
+// Process a PDF file and extract the text content using PDF.js (browser-compatible)
 export const processPDF = async (pdfBuffer: ArrayBuffer): Promise<string[]> => {
   try {
-    const pdfData = await pdfParse(Buffer.from(pdfBuffer));
-    return processText(pdfData.text);
+    // Load the PDF document using PDF.js
+    const loadingTask = pdfjs.getDocument({ data: pdfBuffer });
+    const pdf = await loadingTask.promise;
+    
+    let fullText = '';
+    
+    // Iterate through each page and extract text
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map(item => 'str' in item ? item.str : '')
+        .join(' ');
+        
+      fullText += pageText + ' ';
+    }
+    
+    // Process the extracted text into chunks
+    return processText(fullText);
   } catch (error) {
     console.error("Error processing PDF:", error);
     throw new Error("Failed to process PDF file");
