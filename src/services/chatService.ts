@@ -26,8 +26,24 @@ export async function sendMessageToChatGPT(messages: Message[], apiKey: string |
     // Get the last user message for searching the knowledge base
     const lastUserMessage = messages[messages.length - 1].content;
     
+    // Get Pinecone config from localStorage if available
+    const pineconeApiKey = localStorage.getItem("pinecone_api_key");
+    const pineconeEnvironment = localStorage.getItem("pinecone_environment");
+    const usePinecone = localStorage.getItem("use_pinecone") === "true";
+    
     // Search the vector database for relevant documents
-    const relevantDocuments = await searchDocuments(lastUserMessage, apiKey, 3);
+    let relevantDocuments;
+    if (usePinecone && pineconeApiKey && pineconeEnvironment) {
+      relevantDocuments = await searchDocuments(
+        lastUserMessage, 
+        apiKey, 
+        3, 
+        pineconeApiKey, 
+        pineconeEnvironment
+      );
+    } else {
+      relevantDocuments = await searchDocuments(lastUserMessage, apiKey, 3);
+    }
     
     // Convert our message format to OpenAI's expected format
     const formattedMessages = messages.map(msg => ({

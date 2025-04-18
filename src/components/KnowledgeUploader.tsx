@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Upload, FileText, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, Upload, FileText, AlertTriangle, CheckCircle2, Database } from "lucide-react";
 import { processPDF, processText } from "@/utils/documentProcessing";
 import { storeDocuments, DocumentChunk, getDocumentCount, clearVectorDatabase } from "@/services/vectorService";
 import { useChat } from "@/context/ChatContext";
 import { toast } from "@/components/ui/sonner";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export function KnowledgeUploader() {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -17,6 +18,43 @@ export function KnowledgeUploader() {
   const [currentFileProgress, setCurrentFileProgress] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { state } = useChat();
+  
+  // Pinecone configuration
+  const [pineconeApiKey, setPineconeApiKey] = useState<string>(localStorage.getItem("pinecone_api_key") || "");
+  const [pineconeEnvironment, setPineconeEnvironment] = useState<string>(localStorage.getItem("pinecone_environment") || "");
+  const [usePinecone, setUsePinecone] = useState<boolean>(Boolean(localStorage.getItem("use_pinecone") === "true"));
+
+  // Save Pinecone config to localStorage
+  const savePineconeConfig = () => {
+    if (pineconeApiKey && pineconeEnvironment) {
+      localStorage.setItem("pinecone_api_key", pineconeApiKey);
+      localStorage.setItem("pinecone_environment", pineconeEnvironment);
+      localStorage.setItem("use_pinecone", "true");
+      setUsePinecone(true);
+      toast.success("Pinecone Configuration Saved", {
+        description: "Your documents will now be stored in Pinecone"
+      });
+    } else {
+      localStorage.removeItem("use_pinecone");
+      setUsePinecone(false);
+      toast.error("Incomplete Configuration", {
+        description: "Both API Key and Environment are required for Pinecone"
+      });
+    }
+  };
+
+  // Clear Pinecone config
+  const clearPineconeConfig = () => {
+    localStorage.removeItem("pinecone_api_key");
+    localStorage.removeItem("pinecone_environment");
+    localStorage.removeItem("use_pinecone");
+    setPineconeApiKey("");
+    setPineconeEnvironment("");
+    setUsePinecone(false);
+    toast.info("Pinecone Configuration Cleared", {
+      description: "Your documents will be stored in memory"
+    });
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -106,7 +144,14 @@ export function KnowledgeUploader() {
       
       if (documentChunks.length > 0) {
         console.log(`Storing ${documentChunks.length} document chunks in vector database...`);
-        await storeDocuments(documentChunks, state.apiKey);
+        
+        // Pass Pinecone config if enabled
+        if (usePinecone && pineconeApiKey && pineconeEnvironment) {
+          await storeDocuments(documentChunks, state.apiKey, pineconeApiKey, pineconeEnvironment);
+        } else {
+          await storeDocuments(documentChunks, state.apiKey);
+        }
+        
         setDocumentCount(getDocumentCount());
         setUploadStatus("success");
         toast.success("Documents Processed", {
@@ -163,6 +208,73 @@ export function KnowledgeUploader() {
           Upload PDFs or text files to enhance Joe's knowledge base
         </p>
       </div>
+      
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="database-config">
+          <AccordionTrigger className="text-sm font-medium">
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Vector Database Configuration
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-3 pt-2">
+              <div>
+                <Label htmlFor="pinecone-api-key" className="text-sm">
+                  Pinecone API Key
+                </Label>
+                <Input
+                  id="pinecone-api-key"
+                  type="password"
+                  value={pineconeApiKey}
+                  onChange={(e) => setPineconeApiKey(e.target.value)}
+                  placeholder="Enter your Pinecone API key"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="pinecone-environment" className="text-sm">
+                  Pinecone Environment
+                </Label>
+                <Input
+                  id="pinecone-environment"
+                  type="text"
+                  value={pineconeEnvironment}
+                  onChange={(e) => setPineconeEnvironment(e.target.value)}
+                  placeholder="e.g., us-west1-gcp"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div className="flex gap-2 pt-2">
+                <Button 
+                  size="sm" 
+                  onClick={savePineconeConfig}
+                  disabled={!pineconeApiKey || !pineconeEnvironment}
+                >
+                  Save Configuration
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={clearPineconeConfig}
+                >
+                  Use In-Memory Storage
+                </Button>
+              </div>
+              
+              <div className={`text-xs p-2 rounded-md ${usePinecone ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                {usePinecone ? (
+                  <p>Using Pinecone for vector storage. Your documents will persist between sessions.</p>
+                ) : (
+                  <p>Using in-memory storage. Documents will be lost when you close the browser.</p>
+                )}
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
       
       <div className="flex justify-between items-center">
         <div className="text-sm">
