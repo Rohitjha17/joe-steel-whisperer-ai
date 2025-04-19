@@ -17,15 +17,15 @@ export function SteelChatbot() {
   const [activeTab, setActiveTab] = useState<"chat" | "knowledge">("chat");
   
   return (
-    <div className="flex flex-col h-full lg:flex-row gap-6">
+    <div className="flex flex-col h-full lg:flex-row gap-8">
       {/* Main Chat Section */}
-      <div className="flex flex-col flex-1 overflow-hidden rounded-xl border shadow-lg bg-white">
+      <div className="flex flex-col flex-1 overflow-hidden rounded-2xl border border-steel-300 shadow-2xl bg-gradient-to-br from-steel-50 to-white">
         {/* Header */}
-        <div className="flex items-center gap-4 border-b p-4 bg-steel-700 text-white">
+        <div className="flex items-center gap-5 border-b p-6 bg-steel-700 text-white rounded-t-2xl">
           <JoeAvatar />
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">Joe - Steel Industry Expert</h1>
-            <p className="text-steel-200">40 years of steel industry experience at your service</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl md:text-3xl font-bold font-playfair truncate">Joe - Steel Industry Expert</h1>
+            <p className="text-steel-200 text-base md:text-lg truncate">40 years at the top of steel – at your service</p>
           </div>
           <div className="flex gap-2">
             <ApiKeyInput />
@@ -53,7 +53,7 @@ export function SteelChatbot() {
         </div>
         
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "chat" | "knowledge")}>
-          <TabsList className="w-full grid grid-cols-2 bg-steel-100">
+          <TabsList className="w-full grid grid-cols-2 bg-steel-100 rounded-none px-4 py-2 font-semibold">
             <TabsTrigger value="chat" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
               <span>Chat with Joe</span>
@@ -79,22 +79,22 @@ export function SteelChatbot() {
       </div>
       
       {/* Sidebar with Expertise Areas */}
-      <div className="w-full lg:w-80 xl:w-96 rounded-xl border shadow-lg bg-white overflow-hidden">
-        <div className="bg-steel-700 p-4 text-white">
-          <h2 className="text-xl font-bold">Areas of Expertise</h2>
+      <div className="w-full lg:w-80 xl:w-96 rounded-2xl border border-steel-300 shadow-2xl bg-gradient-to-tr from-steel-100 to-white overflow-hidden flex flex-col">
+        <div className="bg-steel-700 p-6 text-white rounded-t-2xl">
+          <h2 className="text-xl font-bold font-playfair">Areas of Expertise</h2>
           <p className="text-steel-200">Joe can help with these key areas</p>
         </div>
-        <div className="grid grid-cols-1 gap-4 p-4 max-h-[calc(100vh-250px)] overflow-y-auto">
+        <div className="grid grid-cols-1 gap-4 p-5 max-h-[calc(100vh-250px)] overflow-y-auto">
           {expertiseAreas.map((expertise) => (
             <ExpertiseArea key={expertise.title} expertise={expertise} />
           ))}
         </div>
-        <div className="border-t p-4 bg-steel-50">
+        <div className="border-t p-5 bg-steel-50">
           <h3 className="text-sm font-medium text-steel-700 mb-2">Quick Questions</h3>
-          <div className="grid gap-2">
+          <div className="grid gap-3">
             <Button 
               variant="outline" 
-              className="justify-start text-left text-sm border-steel-200 hover:bg-steel-100" 
+              className="justify-start text-left text-sm border-steel-200 hover:bg-steel-100 font-semibold" 
               onClick={() => {
                 setActiveTab("chat");
                 sendMessage("What's the best way to manage steel inventory?");
@@ -104,7 +104,7 @@ export function SteelChatbot() {
             </Button>
             <Button 
               variant="outline" 
-              className="justify-start text-left text-sm border-steel-200 hover:bg-steel-100" 
+              className="justify-start text-left text-sm border-steel-200 hover:bg-steel-100 font-semibold" 
               onClick={() => {
                 setActiveTab("chat");
                 sendMessage("What quality checks are critical for steel production?");
@@ -114,7 +114,7 @@ export function SteelChatbot() {
             </Button>
             <Button 
               variant="outline" 
-              className="justify-start text-left text-sm border-steel-200 hover:bg-steel-100" 
+              className="justify-start text-left text-sm border-steel-200 hover:bg-steel-100 font-semibold" 
               onClick={() => {
                 setActiveTab("chat");
                 sendMessage("How can ERP systems help in steel production tracking?");

@@ -5,14 +5,14 @@ import { ChatProvider } from "@/context/ChatContext";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-steel-100 to-steel-200 p-4 md:p-6 lg:p-8">
-      <div className="container mx-auto h-[calc(100vh-4rem)]">
-        <div className="mb-6 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold text-steel-800">
+    <div className="min-h-screen bg-gradient-to-br from-steel-100 to-steel-400 p-4 md:p-10 flex items-center justify-center">
+      <div className="container mx-auto max-w-6xl h-[calc(100vh-4rem)] flex flex-col justify-between">
+        <div className="mb-8 text-center animate-fade-in">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-steel-900 drop-shadow-lg tracking-wide font-playfair">
             Joe – The Steel Industry Veteran Chatbot
           </h1>
-          <p className="mt-2 text-steel-600">
-            Expert guidance and operational insights from 40 years of steel industry experience
+          <p className="mt-3 text-xl text-steel-700">
+            Elite guidance and operational insights inspired by 40+ years of steel industry excellence
           </p>
         </div>
         
@@ -20,8 +20,8 @@ const Index = () => {
           <SteelChatbot />
         </ChatProvider>
         
-        <footer className="mt-8 text-center text-sm text-steel-500">
-          <p>© 2025 EOXS ERP Systems • Powered by AI with real steel industry expertise</p>
+        <footer className="mt-8 text-center text-base text-steel-600 font-semibold">
+          <p>© 2025 EOXS ERP Systems • Powered by AI and genuine steel industry expertise</p>
         </footer>
       </div>
     </div>

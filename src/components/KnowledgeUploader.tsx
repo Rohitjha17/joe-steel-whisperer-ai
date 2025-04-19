@@ -1,10 +1,11 @@
+
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Upload, FileText, AlertTriangle, CheckCircle2, Database } from "lucide-react";
-import { processPDF, processText } from "@/utils/documentProcessing";
+import { Loader2, FileText, AlertTriangle, CheckCircle2, Database } from "lucide-react";
+import { processTXT } from "@/utils/documentProcessing";
 import { storeDocuments, DocumentChunk, getDocumentCount, clearVectorDatabase } from "@/services/vectorService";
 import { useChat } from "@/context/ChatContext";
 import { toast } from "@/components/ui/sonner";
@@ -56,7 +57,7 @@ export function KnowledgeUploader() {
     const files = event.target.files;
     if (!files || files.length === 0) {
       toast.error("No files selected", {
-        description: "Please select one or more PDF or TXT files to upload."
+        description: "Please select one or more TXT files to upload."
       });
       return;
     }
@@ -82,37 +83,23 @@ export function KnowledgeUploader() {
 
         const fileId = `doc-${Date.now()}-${i}`;
 
-        if (!fileExtension) {
-          toast.error("Invalid file", { description: `Could not determine file type for "${fileName}".` });
+        if (!fileExtension || fileExtension !== 'txt') {
+          toast.error("Unsupported File Type", {
+            description: `The file ${fileName} is not supported. Please upload TXT files only.`
+          });
           continue;
         }
 
         try {
-          if (fileExtension === 'pdf') {
-            const fileBuffer = await file.arrayBuffer();
-            const chunks = await processPDF(fileBuffer);
-            chunks.forEach((chunk, index) =>
-              documentChunks.push({
-                id: `${fileId}-chunk-${index}`,
-                text: chunk,
-                metadata: { source: fileName, section: `Chunk ${index + 1}` }
-              })
-            );
-          } else if (fileExtension === 'txt') {
-            const text = await file.text();
-            const chunks = processText(text);
-            chunks.forEach((chunk, index) =>
-              documentChunks.push({
-                id: `${fileId}-chunk-${index}`,
-                text: chunk,
-                metadata: { source: fileName, section: `Chunk ${index + 1}` }
-              })
-            );
-          } else {
-            toast.error("Unsupported File Type", {
-              description: `The file ${fileName} is not supported. Please upload PDF or TXT files only.`
-            });
-          }
+          const text = await file.text();
+          const chunks = await processTXT(text);
+          chunks.forEach((chunk, index) =>
+            documentChunks.push({
+              id: `${fileId}-chunk-${index}`,
+              text: chunk,
+              metadata: { source: fileName, section: `Chunk ${index + 1}` }
+            })
+          );
         } catch (err) {
           console.error(`Error processing file ${fileName}:`, err);
           toast.error("File Processing Error", {
@@ -170,25 +157,25 @@ export function KnowledgeUploader() {
   };
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-6 bg-white rounded-xl shadow-xl border border-steel-200 space-y-6 max-w-xl mx-auto animate-fade-in">
       <div>
-        <Label htmlFor="file-upload" className="text-sm font-medium text-steel-700">
-          Upload Knowledge Documents (PDF, TXT)
+        <Label htmlFor="file-upload" className="text-base font-semibold text-steel-700 mb-2 block tracking-wide">
+          Upload Knowledge Documents (TXT Only)
         </Label>
-        <div className="mt-1">
+        <div className="mt-1 flex items-center gap-4">
           <Input
             id="file-upload"
             type="file"
             ref={fileInputRef}
             onChange={handleFileUpload}
-            accept=".pdf,.txt"
+            accept=".txt"
             multiple
-            className="w-full"
+            className="w-full border border-steel-300 rounded-lg py-2 px-3 text-base focus-visible:ring-steel-500 focus:outline-none"
             disabled={isProcessing}
           />
         </div>
-        <p className="mt-1 text-xs text-steel-500">
-          Upload PDFs or text files to enhance Joe's knowledge base
+        <p className="mt-2 text-xs text-steel-500 italic">
+          Upload well-structured text knowledge only. PDFs and other files are not supported.
         </p>
       </div>
       
@@ -259,9 +246,9 @@ export function KnowledgeUploader() {
         </AccordionItem>
       </Accordion>
       
-      <div className="flex justify-between items-center">
-        <div className="text-sm">
-          <span className="font-medium">Current Knowledge Base:</span>{" "}
+      <div className="flex justify-between items-center px-1">
+        <div className="text-sm font-medium">
+          <span className="font-semibold">Current Knowledge Base:</span>{" "}
           <span className="text-steel-600">{documentCount} chunks indexed</span>
         </div>
         <Button
@@ -276,10 +263,10 @@ export function KnowledgeUploader() {
       </div>
       
       {isProcessing && (
-        <div className="flex flex-col items-center justify-center p-4 border rounded-md bg-steel-50">
+        <div className="flex flex-col items-center justify-center p-4 border rounded-lg bg-gradient-to-b from-steel-50 to-steel-100 shadow">
           <div className="flex items-center mb-2">
-            <Loader2 className="h-5 w-5 animate-spin text-steel-500 mr-2" />
-            <span className="text-sm text-steel-700">Processing documents...</span>
+            <Loader2 className="h-5 w-5 animate-spin text-steel-600 mr-2" />
+            <span className="text-sm text-steel-800 font-medium">Processing documents...</span>
           </div>
           {currentFileProgress && (
             <span className="text-xs text-steel-600">{currentFileProgress}</span>
@@ -288,7 +275,7 @@ export function KnowledgeUploader() {
       )}
       
       {uploadStatus === "success" && (
-        <Alert className="bg-green-50 border-green-200">
+        <Alert className="bg-green-50 border-green-200 mt-2">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <AlertTitle className="text-green-800">Documents Processed</AlertTitle>
           <AlertDescription className="text-green-700">
@@ -298,7 +285,7 @@ export function KnowledgeUploader() {
       )}
       
       {uploadStatus === "error" && (
-        <Alert className="bg-red-50 border-red-200">
+        <Alert className="bg-red-50 border-red-200 mt-2">
           <AlertTriangle className="h-4 w-4 text-red-600" />
           <AlertTitle className="text-red-800">Processing Error</AlertTitle>
           <AlertDescription className="text-red-700">
@@ -307,14 +294,13 @@ export function KnowledgeUploader() {
         </Alert>
       )}
       
-      <div className="border rounded-md p-3 bg-steel-50">
-        <div className="flex items-start">
-          <FileText className="h-5 w-5 text-steel-600 mr-2 mt-0.5" />
+      <div className="border rounded-lg p-4 bg-gradient-to-br from-steel-50 to-steel-100 shadow-sm mt-4">
+        <div className="flex items-start gap-3">
+          <FileText className="h-5 w-5 text-steel-700 mt-1" />
           <div>
-            <h3 className="text-sm font-medium text-steel-700">Recommended Document Format</h3>
+            <h3 className="text-base font-semibold text-steel-700">Recommended Document Format</h3>
             <p className="text-xs text-steel-600 mt-1">
-              For best results, organize documents with clear headings and separate sections. Each document
-              should focus on specific steel industry topics or processes for better retrieval accuracy.
+              For best results, organize text with clear headings and sections. Each file should be focused on a steel industry topic or process.
             </p>
           </div>
         </div>

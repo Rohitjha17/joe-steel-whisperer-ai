@@ -1,9 +1,4 @@
 import { OpenAI } from "openai";
-import * as pdfjs from 'pdfjs-dist';
-
-// Set worker source for PDF.js using the CDN-hosted worker, so it works with Vite/React
-// @ts-ignore
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 // Function to process and chunk text from a document
 export const processText = (text: string, chunkSize = 1000, overlap = 200): string[] => {
@@ -29,31 +24,9 @@ export const processText = (text: string, chunkSize = 1000, overlap = 200): stri
   return chunks;
 };
 
-// Process a PDF file and extract the text content using PDF.js (browser-compatible)
-export const processPDF = async (pdfBuffer: ArrayBuffer): Promise<string[]> => {
-  try {
-    console.log("Starting PDF processing with PDF.js, loading worker from CDN...");
-    const loadingTask = pdfjs.getDocument({ data: pdfBuffer });
-    const pdf = await loadingTask.promise;
-    console.log(`PDF loaded. Pages: ${pdf.numPages}`);
-    let fullText = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      try {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map(item => 'str' in item ? item.str : '').join(' ');
-        fullText += pageText + ' ';
-      } catch (e) {
-        console.error(`Error processing page ${i}:`, e);
-      }
-    }
-    const chunks = processText(fullText);
-    console.log(`Extracted ${chunks.length} chunks from PDF`);
-    return chunks;
-  } catch (error) {
-    console.error("Error processing PDF:", error);
-    throw new Error(`Failed to process PDF file: ${error instanceof Error ? error.message : 'Unknown error'}. If this error refers to loading a worker, make sure your build system supports importing 'pdfjs-dist/build/pdf.worker.entry'.`);
-  }
+// TXT ONLY: Process a TXT file and extract text chunks
+export const processTXT = async (txt: string): Promise<string[]> => {
+  return processText(txt);
 };
 
 // Generate embeddings for text chunks
