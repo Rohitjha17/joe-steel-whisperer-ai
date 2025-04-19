@@ -1,12 +1,9 @@
-
 import { OpenAI } from "openai";
 import * as pdfjs from 'pdfjs-dist';
-// Import the worker entry directly for Vite compatibility:
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.entry";
 
-// Set worker source for PDF.js using the locally bundled worker.
+// Set worker source for PDF.js using the CDN-hosted worker, so it works with Vite/React
 // @ts-ignore
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 // Function to process and chunk text from a document
 export const processText = (text: string, chunkSize = 1000, overlap = 200): string[] => {
@@ -35,7 +32,7 @@ export const processText = (text: string, chunkSize = 1000, overlap = 200): stri
 // Process a PDF file and extract the text content using PDF.js (browser-compatible)
 export const processPDF = async (pdfBuffer: ArrayBuffer): Promise<string[]> => {
   try {
-    console.log("Starting PDF processing with PDF.js, loading worker from local bundle...");
+    console.log("Starting PDF processing with PDF.js, loading worker from CDN...");
     const loadingTask = pdfjs.getDocument({ data: pdfBuffer });
     const pdf = await loadingTask.promise;
     console.log(`PDF loaded. Pages: ${pdf.numPages}`);
