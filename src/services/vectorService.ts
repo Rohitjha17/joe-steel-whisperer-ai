@@ -1,4 +1,3 @@
-
 import { Pinecone } from '@pinecone-database/pinecone';
 import { OpenAI } from "openai";
 import { generateEmbeddings } from "@/utils/documentProcessing";
@@ -51,7 +50,7 @@ const initPinecone = (apiKey: string, environment: string) => {
   }
 };
 
-// Store document chunks in the vector database
+// update searchDocuments and storeDocuments with additional error logs, and fix fallback to always surface errors
 export const storeDocuments = async (
   chunks: DocumentChunk[],
   apiKey: string,
@@ -62,73 +61,53 @@ export const storeDocuments = async (
     // Generate embeddings for all chunks
     const texts = chunks.map(chunk => chunk.text);
     const embeddings = await generateEmbeddings(texts, apiKey);
-    
-    // If Pinecone credentials are provided, store in Pinecone
+
     if (pineconeApiKey && pineconeEnvironment) {
       try {
         console.log("Initializing Pinecone client...");
         const pinecone = initPinecone(pineconeApiKey, pineconeEnvironment);
-        
-        // Use the default index or specify one
+
         const indexName = "joe-knowledge";
-        
         try {
           const indexes = await pinecone.listIndexes();
-          
-          // Check if index exists
+
           if (!indexes.some(idx => idx.name === indexName)) {
             console.log(`Index '${indexName}' doesn't exist in Pinecone. Using in-memory storage instead.`);
-            // Fall back to in-memory storage
-            for (let i = 0; i < chunks.length; i++) {
-              inMemoryVectorDB.push({
-                id: chunks[i].id,
-                text: chunks[i].text,
-                embedding: embeddings[i],
-                metadata: chunks[i].metadata
-              });
-            }
+            storeInMemory(chunks, embeddings);
             return;
           }
-          
+
           const index = pinecone.index(indexName);
-          
-          // Prepare vectors for upsert
+
           const vectors = chunks.map((chunk, i) => ({
             id: chunk.id,
             values: embeddings[i],
-            metadata: {
-              ...chunk.metadata,
-              text: chunk.text // Store text in metadata for retrieval
-            }
+            metadata: { ...chunk.metadata, text: chunk.text }
           }));
-          
-          // Upsert in batches of 100 (Pinecone limit)
+
           const batchSize = 100;
           for (let i = 0; i < vectors.length; i += batchSize) {
             const batch = vectors.slice(i, i + batchSize);
             await index.upsert(batch);
             console.log(`Upserted batch ${i / batchSize + 1} to Pinecone`);
           }
-          
+
           console.log(`Stored ${chunks.length} document chunks in Pinecone`);
         } catch (indexError) {
           console.error("Error accessing Pinecone indexes:", indexError);
-          // Fall back to in-memory storage
           storeInMemory(chunks, embeddings);
         }
       } catch (pineconeError) {
-        console.error("Error using Pinecone, falling back to in-memory storage:", pineconeError);
-        // Fall back to in-memory storage
+        console.error("Error using Pinecone, will store in memory. Pinecone error:", pineconeError);
         storeInMemory(chunks, embeddings);
       }
     } else {
-      // Store documents in memory (default fallback)
       storeInMemory(chunks, embeddings);
       console.log(`Stored ${chunks.length} document chunks in in-memory vector database`);
     }
   } catch (error) {
-    console.error("Error storing documents:", error);
-    throw new Error("Failed to store documents in vector database");
+    console.error("Error storing documents in vector DB:", error);
+    throw new Error("Failed to store documents in vector database: " + (error instanceof Error ? error.message : "Unknown error"));
   }
 };
 

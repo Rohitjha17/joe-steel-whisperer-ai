@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,12 +18,10 @@ export function KnowledgeUploader() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { state } = useChat();
   
-  // Pinecone configuration
   const [pineconeApiKey, setPineconeApiKey] = useState<string>(localStorage.getItem("pinecone_api_key") || "");
   const [pineconeEnvironment, setPineconeEnvironment] = useState<string>(localStorage.getItem("pinecone_environment") || "");
   const [usePinecone, setUsePinecone] = useState<boolean>(Boolean(localStorage.getItem("use_pinecone") === "true"));
 
-  // Save Pinecone config to localStorage
   const savePineconeConfig = () => {
     if (pineconeApiKey && pineconeEnvironment) {
       localStorage.setItem("pinecone_api_key", pineconeApiKey);
@@ -43,7 +40,6 @@ export function KnowledgeUploader() {
     }
   };
 
-  // Clear Pinecone config
   const clearPineconeConfig = () => {
     localStorage.removeItem("pinecone_api_key");
     localStorage.removeItem("pinecone_environment");
@@ -58,105 +54,92 @@ export function KnowledgeUploader() {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || files.length === 0) return;
-    
+    if (!files || files.length === 0) {
+      toast.error("No files selected", {
+        description: "Please select one or more PDF or TXT files to upload."
+      });
+      return;
+    }
+
     if (!state.apiKey) {
       toast.error("API Key Required", {
         description: "Please set your OpenAI API key first to process documents"
       });
       return;
     }
-    
+
     setIsProcessing(true);
     setUploadStatus("idle");
-    
+
     try {
       const documentChunks: DocumentChunk[] = [];
-      
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileName = file.name;
         setCurrentFileProgress(`Processing ${fileName} (${i + 1}/${files.length})`);
         const fileExtension = fileName.split('.').pop()?.toLowerCase();
-        
-        // Generate a unique ID for each file
+
         const fileId = `doc-${Date.now()}-${i}`;
-        
-        console.log(`Processing file: ${fileName}, type: ${fileExtension}`);
-        
-        if (fileExtension === 'pdf') {
-          try {
-            const fileBuffer = await file.arrayBuffer();
-            console.log(`PDF file size: ${fileBuffer.byteLength} bytes`);
-            const chunks = await processPDF(fileBuffer);
-            
-            // Add each chunk to documentChunks
-            chunks.forEach((chunk, index) => {
-              documentChunks.push({
-                id: `${fileId}-chunk-${index}`,
-                text: chunk,
-                metadata: {
-                  source: fileName,
-                  section: `Chunk ${index + 1}`
-                }
-              });
-            });
-            
-            console.log(`Successfully processed PDF: ${fileName}, generated ${chunks.length} chunks`);
-          } catch (pdfError) {
-            console.error(`Error processing PDF file ${fileName}:`, pdfError);
-            toast.error(`Error Processing PDF: ${fileName}`, {
-              description: pdfError instanceof Error ? pdfError.message : "Failed to process PDF file"
-            });
-          }
-        } else if (fileExtension === 'txt') {
-          try {
-            const text = await file.text();
-            console.log(`TXT file length: ${text.length} characters`);
-            const chunks = processText(text);
-            
-            // Add each chunk to documentChunks
-            chunks.forEach((chunk, index) => {
-              documentChunks.push({
-                id: `${fileId}-chunk-${index}`,
-                text: chunk,
-                metadata: {
-                  source: fileName,
-                  section: `Chunk ${index + 1}`
-                }
-              });
-            });
-            
-            console.log(`Successfully processed TXT: ${fileName}, generated ${chunks.length} chunks`);
-          } catch (txtError) {
-            console.error(`Error processing TXT file ${fileName}:`, txtError);
-            toast.error(`Error Processing TXT: ${fileName}`, {
-              description: txtError instanceof Error ? txtError.message : "Failed to process text file"
-            });
-          }
-        } else {
-          toast.error("Unsupported File Type", {
-            description: `The file ${fileName} is not supported. Please upload PDF or TXT files only.`
-          });
+
+        if (!fileExtension) {
+          toast.error("Invalid file", { description: `Could not determine file type for "${fileName}".` });
           continue;
         }
-      }
-      
-      if (documentChunks.length > 0) {
-        console.log(`Storing ${documentChunks.length} document chunks in vector database...`);
-        
-        // Pass Pinecone config if enabled
-        if (usePinecone && pineconeApiKey && pineconeEnvironment) {
-          await storeDocuments(documentChunks, state.apiKey, pineconeApiKey, pineconeEnvironment);
-        } else {
-          await storeDocuments(documentChunks, state.apiKey);
+
+        try {
+          if (fileExtension === 'pdf') {
+            const fileBuffer = await file.arrayBuffer();
+            const chunks = await processPDF(fileBuffer);
+            chunks.forEach((chunk, index) =>
+              documentChunks.push({
+                id: `${fileId}-chunk-${index}`,
+                text: chunk,
+                metadata: { source: fileName, section: `Chunk ${index + 1}` }
+              })
+            );
+          } else if (fileExtension === 'txt') {
+            const text = await file.text();
+            const chunks = processText(text);
+            chunks.forEach((chunk, index) =>
+              documentChunks.push({
+                id: `${fileId}-chunk-${index}`,
+                text: chunk,
+                metadata: { source: fileName, section: `Chunk ${index + 1}` }
+              })
+            );
+          } else {
+            toast.error("Unsupported File Type", {
+              description: `The file ${fileName} is not supported. Please upload PDF or TXT files only.`
+            });
+          }
+        } catch (err) {
+          console.error(`Error processing file ${fileName}:`, err);
+          toast.error("File Processing Error", {
+            description: err instanceof Error ? err.message : "Failed to process file"
+          });
         }
-        
-        setDocumentCount(getDocumentCount());
-        setUploadStatus("success");
-        toast.success("Documents Processed", {
-          description: `${documentChunks.length} chunks were successfully added to Joe's knowledge base`
-        });
+      }
+
+      if (documentChunks.length > 0) {
+        try {
+          if (usePinecone && pineconeApiKey && pineconeEnvironment) {
+            await storeDocuments(documentChunks, state.apiKey, pineconeApiKey, pineconeEnvironment);
+          } else {
+            await storeDocuments(documentChunks, state.apiKey);
+          }
+          setDocumentCount(getDocumentCount());
+          setUploadStatus("success");
+          toast.success("Documents Processed", {
+            description: `${documentChunks.length} chunks were added to Joe's knowledge base.`
+          });
+        } catch (storageError) {
+          console.error("Error storing documents:", storageError);
+          setUploadStatus("error");
+          toast.error("Storage Error", {
+            description: storageError instanceof Error ? storageError.message : "Failed to store documents"
+          });
+        }
       } else {
         setUploadStatus("error");
         toast.error("No Content Processed", {
