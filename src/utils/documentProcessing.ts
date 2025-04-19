@@ -1,9 +1,12 @@
+
 import { OpenAI } from "openai";
 import * as pdfjs from 'pdfjs-dist';
+// Import the worker entry directly for Vite compatibility:
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.entry";
 
-// Set worker source for PDF.js
-const pdfWorkerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
+// Set worker source for PDF.js using the locally bundled worker.
+// @ts-ignore
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 // Function to process and chunk text from a document
 export const processText = (text: string, chunkSize = 1000, overlap = 200): string[] => {
@@ -32,7 +35,7 @@ export const processText = (text: string, chunkSize = 1000, overlap = 200): stri
 // Process a PDF file and extract the text content using PDF.js (browser-compatible)
 export const processPDF = async (pdfBuffer: ArrayBuffer): Promise<string[]> => {
   try {
-    console.log("Starting PDF processing with PDF.js...");
+    console.log("Starting PDF processing with PDF.js, loading worker from local bundle...");
     const loadingTask = pdfjs.getDocument({ data: pdfBuffer });
     const pdf = await loadingTask.promise;
     console.log(`PDF loaded. Pages: ${pdf.numPages}`);
@@ -52,7 +55,7 @@ export const processPDF = async (pdfBuffer: ArrayBuffer): Promise<string[]> => {
     return chunks;
   } catch (error) {
     console.error("Error processing PDF:", error);
-    throw new Error(`Failed to process PDF file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to process PDF file: ${error instanceof Error ? error.message : 'Unknown error'}. If this error refers to loading a worker, make sure your build system supports importing 'pdfjs-dist/build/pdf.worker.entry'.`);
   }
 };
 
