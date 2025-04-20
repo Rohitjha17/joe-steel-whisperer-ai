@@ -1,10 +1,9 @@
-
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, FileText, AlertTriangle, CheckCircle2, Database } from "lucide-react";
+import { Loader2, FileText, AlertTriangle, CheckCircle2, Database, FilePdf } from "lucide-react";
 import { processTXT } from "@/utils/documentProcessing";
 import { storeDocuments, DocumentChunk, getDocumentCount, clearVectorDatabase } from "@/services/vectorService";
 import { useChat } from "@/context/ChatContext";
@@ -18,10 +17,19 @@ export function KnowledgeUploader() {
   const [currentFileProgress, setCurrentFileProgress] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { state } = useChat();
-  
-  const [pineconeApiKey, setPineconeApiKey] = useState<string>(localStorage.getItem("pinecone_api_key") || "");
-  const [pineconeEnvironment, setPineconeEnvironment] = useState<string>(localStorage.getItem("pinecone_environment") || "");
-  const [usePinecone, setUsePinecone] = useState<boolean>(Boolean(localStorage.getItem("use_pinecone") === "true"));
+
+  const [pineconeApiKey, setPineconeApiKey] = useState<string>(() => localStorage.getItem("pinecone_api_key") || "");
+  const [pineconeEnvironment, setPineconeEnvironment] = useState<string>(() => localStorage.getItem("pinecone_environment") || "");
+  const [usePinecone, setUsePinecone] = useState<boolean>(() => Boolean(localStorage.getItem("use_pinecone") === "true"));
+
+  useEffect(() => {
+    if (!usePinecone) {
+      toast.warning("In-memory mode", {
+        description: "Uploaded data will be lost when you refresh or close the app. Configure Pinecone for persistent knowledge.",
+        duration: 4000,
+      });
+    }
+  }, [usePinecone]);
 
   const savePineconeConfig = () => {
     if (pineconeApiKey && pineconeEnvironment) {
@@ -74,7 +82,6 @@ export function KnowledgeUploader() {
 
     try {
       const documentChunks: DocumentChunk[] = [];
-
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileName = file.name;
@@ -83,15 +90,21 @@ export function KnowledgeUploader() {
 
         const fileId = `doc-${Date.now()}-${i}`;
 
-        if (!fileExtension || fileExtension !== 'txt') {
+        if (!fileExtension || (fileExtension !== 'txt' && fileExtension !== 'pdf')) {
           toast.error("Unsupported File Type", {
-            description: `The file ${fileName} is not supported. Please upload TXT files only.`
+            description: `The file ${fileName} is not supported. Please upload TXT or PDF files only.`
           });
           continue;
         }
 
         try {
-          const text = await file.text();
+          let text = "";
+          if (fileExtension === "txt") {
+            text = await file.text();
+          } else if (fileExtension === "pdf") {
+            toast.info("PDF support coming soon", { description: "PDF upload support is planned for future updates." });
+            continue;
+          }
           const chunks = await processTXT(text);
           chunks.forEach((chunk, index) =>
             documentChunks.push({
@@ -157,10 +170,10 @@ export function KnowledgeUploader() {
   };
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow-xl border border-steel-200 space-y-6 max-w-xl mx-auto animate-fade-in">
+    <div className="p-6 bg-white rounded-xl shadow-xl border border-steel-200 space-y-5 w-full animate-fade-in">
       <div>
         <Label htmlFor="file-upload" className="text-base font-semibold text-steel-700 mb-2 block tracking-wide">
-          Upload Knowledge Documents (TXT Only)
+          Upload Knowledge Documents (TXT, PDF soon)
         </Label>
         <div className="mt-1 flex items-center gap-4">
           <Input
@@ -168,17 +181,23 @@ export function KnowledgeUploader() {
             type="file"
             ref={fileInputRef}
             onChange={handleFileUpload}
-            accept=".txt"
+            accept=".txt,.pdf"
             multiple
             className="w-full border border-steel-300 rounded-lg py-2 px-3 text-base focus-visible:ring-steel-500 focus:outline-none"
             disabled={isProcessing}
           />
+          <FileText className="h-6 w-6 text-steel-400" />
+          <FilePdf className="h-6 w-6 text-steel-400" />
         </div>
         <p className="mt-2 text-xs text-steel-500 italic">
-          Upload well-structured text knowledge only. PDFs and other files are not supported.
+          Upload structured .txt files (PDF uploading coming soon).
         </p>
+        {!usePinecone && (
+          <div className="bg-yellow-50 border border-yellow-300 text-yellow-800 text-xs rounded-md px-3 py-2 my-2">
+            <b>Warning:</b> Uploaded knowledge is <u>not persistent</u>. Configure Pinecone below for permanent storage and recall between sessions.
+          </div>
+        )}
       </div>
-      
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="database-config">
           <AccordionTrigger className="text-sm font-medium">
@@ -202,7 +221,6 @@ export function KnowledgeUploader() {
                   className="mt-1"
                 />
               </div>
-              
               <div>
                 <Label htmlFor="pinecone-environment" className="text-sm">
                   Pinecone Environment
@@ -216,36 +234,25 @@ export function KnowledgeUploader() {
                   className="mt-1"
                 />
               </div>
-              
               <div className="flex gap-2 pt-2">
-                <Button 
-                  size="sm" 
-                  onClick={savePineconeConfig}
-                  disabled={!pineconeApiKey || !pineconeEnvironment}
-                >
+                <Button size="sm" onClick={savePineconeConfig} disabled={!pineconeApiKey || !pineconeEnvironment}>
                   Save Configuration
                 </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={clearPineconeConfig}
-                >
+                <Button size="sm" variant="outline" onClick={clearPineconeConfig}>
                   Use In-Memory Storage
                 </Button>
               </div>
-              
               <div className={`text-xs p-2 rounded-md ${usePinecone ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
                 {usePinecone ? (
-                  <p>Using Pinecone for vector storage. Your documents will persist between sessions.</p>
+                  <p>Using Pinecone for vector storage. Knowledge persists between refreshes.</p>
                 ) : (
-                  <p>Using in-memory storage. Documents will be lost when you close the browser.</p>
+                  <p>In-memory storage: knowledge wipes on refresh.</p>
                 )}
               </div>
             </div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-      
       <div className="flex justify-between items-center px-1">
         <div className="text-sm font-medium">
           <span className="font-semibold">Current Knowledge Base:</span>{" "}
@@ -261,7 +268,6 @@ export function KnowledgeUploader() {
           Reset Knowledge Base
         </Button>
       </div>
-      
       {isProcessing && (
         <div className="flex flex-col items-center justify-center p-4 border rounded-lg bg-gradient-to-b from-steel-50 to-steel-100 shadow">
           <div className="flex items-center mb-2">
@@ -273,7 +279,6 @@ export function KnowledgeUploader() {
           )}
         </div>
       )}
-      
       {uploadStatus === "success" && (
         <Alert className="bg-green-50 border-green-200 mt-2">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -283,7 +288,6 @@ export function KnowledgeUploader() {
           </AlertDescription>
         </Alert>
       )}
-      
       {uploadStatus === "error" && (
         <Alert className="bg-red-50 border-red-200 mt-2">
           <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -293,7 +297,6 @@ export function KnowledgeUploader() {
           </AlertDescription>
         </Alert>
       )}
-      
       <div className="border rounded-lg p-4 bg-gradient-to-br from-steel-50 to-steel-100 shadow-sm mt-4">
         <div className="flex items-start gap-3">
           <FileText className="h-5 w-5 text-steel-700 mt-1" />
