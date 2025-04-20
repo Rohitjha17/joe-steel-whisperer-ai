@@ -5,6 +5,10 @@ import { ChatInput } from "./chat/ChatInput";
 import { ExpertiseArea } from "./chat/ExpertiseArea";
 import { expertiseAreas } from "@/data/expertiseData";
 import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+import { JoeAvatar } from "./chat/JoeAvatar";
+import { ApiKeyInput } from "./ApiKeyInput";
+import { KnowledgeUploader } from "./KnowledgeUploader";
 
 /**
  * SteelChatbot. 
