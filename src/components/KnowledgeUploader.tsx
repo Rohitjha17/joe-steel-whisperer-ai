@@ -3,19 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, FileText, AlertTriangle, CheckCircle2, Database } from "lucide-react";
+import { Loader2, FileText, FilePdf, AlertTriangle, CheckCircle2, Database } from "lucide-react";
 import { processTXT } from "@/utils/documentProcessing";
 import { storeDocuments, DocumentChunk, getDocumentCount, clearVectorDatabase } from "@/services/vectorService";
 import { useChat } from "@/context/ChatContext";
 import { toast } from "@/components/ui/sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-
-const FilePdfIcon = (props: React.SVGProps<SVGSVGElement>) => {
-  const icons = require("lucide-react").icons;
-  const IconComponent = icons && icons["file-pdf"];
-  if (IconComponent) return <IconComponent {...props} />;
-  return <svg {...props}><rect width="100%" height="100%" fill="gray" /></svg>;
-};
 
 export function KnowledgeUploader() {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -194,7 +187,7 @@ export function KnowledgeUploader() {
             disabled={isProcessing}
           />
           <FileText className="h-6 w-6 text-steel-400" />
-          <FilePdfIcon className="h-6 w-6 text-steel-400" />
+          <FilePdf className="h-6 w-6 text-steel-400" />
         </div>
         <p className="mt-2 text-xs text-steel-500 italic">
           Upload structured .txt files (PDF uploading coming soon).
