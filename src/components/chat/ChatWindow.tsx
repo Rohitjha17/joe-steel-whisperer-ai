@@ -4,11 +4,10 @@ import { Message } from "@/types/chat";
 import { ChatMessage } from "./ChatMessage";
 import { Loader2 } from "lucide-react";
 
-// Smooth, modern, beautifully scrollable chat, ChatGPT style.
+// ChatWindow is exclusively scrollable. No scroll bleed!
 export function ChatWindow({ messages, isLoading }: { messages: Message[], isLoading: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Always scroll to bottom for new messages/loading
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -18,12 +17,12 @@ export function ChatWindow({ messages, isLoading }: { messages: Message[], isLoa
   const showWelcome = messages.length === 0;
 
   return (
-    <div className="flex-1 relative">
+    <div className="h-full w-full">
       <div
         ref={scrollRef}
-        className="overflow-y-auto px-3 py-6 h-full w-full max-h-[65vh] md:max-h-[640px] scrollbar-thin scrollbar-thumb-steel-200 scrollbar-track-white animate-fade-in"
-        style={{ minHeight: "340px", height: "100%" }}
+        className="h-[62vh] md:h-[62vh] overflow-y-auto w-full px-2 md:px-4"
         tabIndex={0}
+        style={{ scrollbarWidth: 'thin', maxHeight: '62vh', minHeight: "350px" }}
       >
         {showWelcome ? (
           <div className="flex h-full items-center justify-center px-2 py-4">
@@ -32,7 +31,7 @@ export function ChatWindow({ messages, isLoading }: { messages: Message[], isLoa
                 Welcome to Joe's Steel Chat
               </h2>
               <p className="text-steel-600 mb-2 text-lg">
-                Powered by 40+ years of experience.<br />
+                Powered by your uploaded knowledge and 40+ years of experience.<br />
                 Ask me anything about operations, procurement, quality or production!
               </p>
             </div>
