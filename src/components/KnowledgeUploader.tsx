@@ -13,7 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 export function KnowledgeUploader() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<"idle" | "success" | "error">("idle");
-  const [documentCount, setDocumentCount] = useState(getDocumentCount());
+  const [documentCount, setDocumentCount] = useState<number>(0);
   const [currentFileProgress, setCurrentFileProgress] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { state } = useChat();
@@ -21,6 +21,23 @@ export function KnowledgeUploader() {
   const [pineconeApiKey, setPineconeApiKey] = useState<string>(() => localStorage.getItem("pinecone_api_key") || "");
   const [pineconeEnvironment, setPineconeEnvironment] = useState<string>(() => localStorage.getItem("pinecone_environment") || "");
   const [usePinecone, setUsePinecone] = useState<boolean>(() => Boolean(localStorage.getItem("use_pinecone") === "true"));
+
+  // Update document count when component mounts or when Pinecone config changes
+  useEffect(() => {
+    const updateDocumentCount = async () => {
+      try {
+        const count = await getDocumentCount(
+          usePinecone ? pineconeApiKey : undefined,
+          usePinecone ? pineconeEnvironment : undefined
+        );
+        setDocumentCount(count);
+      } catch (error) {
+        console.error("Error fetching document count:", error);
+        setDocumentCount(0);
+      }
+    };
+    updateDocumentCount();
+  }, [usePinecone, pineconeApiKey, pineconeEnvironment]);
 
   useEffect(() => {
     if (!usePinecone) {
@@ -128,7 +145,12 @@ export function KnowledgeUploader() {
           } else {
             await storeDocuments(documentChunks, state.apiKey);
           }
-          setDocumentCount(getDocumentCount());
+          // Update document count after storing
+          const newCount = await getDocumentCount(
+            usePinecone ? pineconeApiKey : undefined,
+            usePinecone ? pineconeEnvironment : undefined
+          );
+          setDocumentCount(newCount);
           setUploadStatus("success");
           toast.success("Documents Processed", {
             description: `${documentChunks.length} chunks were added to Joe's knowledge base.`
@@ -161,12 +183,22 @@ export function KnowledgeUploader() {
     }
   };
 
-  const handleReset = () => {
-    clearVectorDatabase();
-    setDocumentCount(0);
-    toast.info("Knowledge Base Reset", {
-      description: "All documents have been removed from Joe's knowledge base"
-    });
+  const handleReset = async () => {
+    try {
+      await clearVectorDatabase(
+        usePinecone ? pineconeApiKey : undefined,
+        usePinecone ? pineconeEnvironment : undefined
+      );
+      setDocumentCount(0);
+      toast.info("Knowledge Base Reset", {
+        description: "All documents have been removed from Joe's knowledge base"
+      });
+    } catch (error) {
+      console.error("Error clearing vector database:", error);
+      toast.error("Reset Error", {
+        description: "Failed to clear the knowledge base"
+      });
+    }
   };
 
   return (

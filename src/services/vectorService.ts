@@ -13,8 +13,12 @@ export interface DocumentChunk {
   };
 }
 
-// In-memory storage for vector database (for demo purposes)
-// In production, use Pinecone, Supabase, or another vector DB
+// Constants for Pinecone configuration
+const PINECONE_INDEX_NAME = "joe-knowledge";
+const PINECONE_NAMESPACE = "steel-docs"; // Namespace for steel industry documents
+const PINECONE_DIMENSION = 1536; // OpenAI ada-002 embedding dimension
+
+// In-memory storage for vector database (fallback)
 let inMemoryVectorDB: Array<{
   id: string;
   text: string;
@@ -38,11 +42,11 @@ const cosineSimilarity = (vecA: number[], vecB: number[]): number => {
 };
 
 // Initialize Pinecone client
-const initPinecone = (apiKey: string, environment: string) => {
+const initPinecone = (apiKey: string, environment: string): Pinecone => {
   try {
     return new Pinecone({
-      apiKey: apiKey,
-      environment: environment,
+      apiKey,
+      environment,
     });
   } catch (error) {
     console.error("Error initializing Pinecone:", error);
@@ -50,7 +54,41 @@ const initPinecone = (apiKey: string, environment: string) => {
   }
 };
 
-// update searchDocuments and storeDocuments with additional error logs, and fix fallback to always surface errors
+// Create Pinecone index if it doesn't exist
+const ensurePineconeIndex = async (pinecone: Pinecone): Promise<void> => {
+  try {
+    const indexes = await pinecone.listIndexes();
+    
+    if (!indexes.some(idx => idx.name === PINECONE_INDEX_NAME)) {
+      console.log(`Creating new Pinecone index: ${PINECONE_INDEX_NAME}`);
+      await pinecone.createIndex({
+        name: PINECONE_INDEX_NAME,
+        dimension: PINECONE_DIMENSION,
+        metric: 'cosine',
+      });
+      
+      // Wait for index to be ready
+      let isReady = false;
+      while (!isReady) {
+        const description = await pinecone.describeIndex(PINECONE_INDEX_NAME);
+        if (description.status?.ready) {
+          isReady = true;
+          console.log('Pinecone index is ready');
+        } else {
+          console.log('Waiting for Pinecone index to be ready...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+      }
+    } else {
+      console.log(`Pinecone index ${PINECONE_INDEX_NAME} already exists`);
+    }
+  } catch (error) {
+    console.error("Error creating Pinecone index:", error);
+    throw new Error("Failed to create Pinecone index");
+  }
+};
+
+// Store documents in vector database
 export const storeDocuments = async (
   chunks: DocumentChunk[],
   apiKey: string,
@@ -67,36 +105,27 @@ export const storeDocuments = async (
         console.log("Initializing Pinecone client...");
         const pinecone = initPinecone(pineconeApiKey, pineconeEnvironment);
 
-        const indexName = "joe-knowledge";
-        try {
-          const indexes = await pinecone.listIndexes();
+        // Ensure index exists
+        await ensurePineconeIndex(pinecone);
+        
+        const index = pinecone.index(PINECONE_INDEX_NAME);
+        
+        // Prepare vectors with namespace
+        const vectors = chunks.map((chunk, i) => ({
+          id: chunk.id,
+          values: embeddings[i],
+          metadata: { ...chunk.metadata, text: chunk.text }
+        }));
 
-          if (!indexes.some(idx => idx.name === indexName)) {
-            console.log(`Index '${indexName}' doesn't exist in Pinecone. Using in-memory storage instead.`);
-            storeInMemory(chunks, embeddings);
-            return;
-          }
-
-          const index = pinecone.index(indexName);
-
-          const vectors = chunks.map((chunk, i) => ({
-            id: chunk.id,
-            values: embeddings[i],
-            metadata: { ...chunk.metadata, text: chunk.text }
-          }));
-
-          const batchSize = 100;
-          for (let i = 0; i < vectors.length; i += batchSize) {
-            const batch = vectors.slice(i, i + batchSize);
-            await index.upsert(batch);
-            console.log(`Upserted batch ${i / batchSize + 1} to Pinecone`);
-          }
-
-          console.log(`Stored ${chunks.length} document chunks in Pinecone`);
-        } catch (indexError) {
-          console.error("Error accessing Pinecone indexes:", indexError);
-          storeInMemory(chunks, embeddings);
+        // Upload vectors in batches
+        const batchSize = 100;
+        for (let i = 0; i < vectors.length; i += batchSize) {
+          const batch = vectors.slice(i, i + batchSize);
+          await index.namespace(PINECONE_NAMESPACE).upsert(batch);
+          console.log(`Upserted batch ${Math.floor(i / batchSize) + 1} to Pinecone namespace: ${PINECONE_NAMESPACE}`);
         }
+
+        console.log(`Stored ${chunks.length} document chunks in Pinecone namespace: ${PINECONE_NAMESPACE}`);
       } catch (pineconeError) {
         console.error("Error using Pinecone, will store in memory. Pinecone error:", pineconeError);
         storeInMemory(chunks, embeddings);
@@ -132,7 +161,6 @@ export const searchDocuments = async (
   pineconeEnvironment?: string
 ): Promise<DocumentChunk[]> => {
   try {
-    // If API key is null or invalid, return empty results
     if (!apiKey || apiKey.trim() === '') {
       console.log("No API key provided for search, returning empty results");
       return [];
@@ -156,43 +184,35 @@ export const searchDocuments = async (
       if (pineconeApiKey && pineconeEnvironment) {
         try {
           const pinecone = initPinecone(pineconeApiKey, pineconeEnvironment);
-          const indexName = "joe-knowledge";
           
           // Check if index exists
-          try {
-            const indexes = await pinecone.listIndexes();
-            if (!indexes.some(idx => idx.name === indexName)) {
-              console.log(`Index '${indexName}' doesn't exist in Pinecone. Using in-memory search instead.`);
-              // Fall back to in-memory search
-              return searchInMemory(queryEmbedding, topK);
-            }
-            
-            const index = pinecone.index(indexName);
-            
-            // Query Pinecone
-            const queryResponse = await index.query({
-              vector: queryEmbedding,
-              topK,
-              includeMetadata: true
-            });
-            
-            // Transform results
-            return queryResponse.matches.map(match => ({
-              id: match.id,
-              text: match.metadata?.text as string,
-              metadata: {
-                source: match.metadata?.source as string,
-                section: match.metadata?.section as string,
-                page: match.metadata?.page as number
-              }
-            }));
-          } catch (indexError) {
-            console.error("Error accessing Pinecone indexes:", indexError);
+          const indexes = await pinecone.listIndexes();
+          if (!indexes.some(idx => idx.name === PINECONE_INDEX_NAME)) {
+            console.log(`Index '${PINECONE_INDEX_NAME}' doesn't exist in Pinecone. Using in-memory search instead.`);
             return searchInMemory(queryEmbedding, topK);
           }
+          
+          const index = pinecone.index(PINECONE_INDEX_NAME);
+          
+          // Query Pinecone with namespace
+          const queryResponse = await index.namespace(PINECONE_NAMESPACE).query({
+            vector: queryEmbedding,
+            topK,
+            includeMetadata: true
+          });
+          
+          // Transform results
+          return queryResponse.matches.map(match => ({
+            id: match.id,
+            text: match.metadata?.text as string,
+            metadata: {
+              source: match.metadata?.source as string,
+              section: match.metadata?.section as string,
+              page: match.metadata?.page as number
+            }
+          }));
         } catch (pineconeError) {
           console.error("Error searching Pinecone, falling back to in-memory search:", pineconeError);
-          // Fall back to in-memory search
           return searchInMemory(queryEmbedding, topK);
         }
       } else {
@@ -201,22 +221,18 @@ export const searchDocuments = async (
       }
     } catch (openaiError) {
       console.error("Error with OpenAI API:", openaiError);
-      return []; // Return empty results on OpenAI API error
+      return [];
     }
   } catch (error) {
     console.error("Error searching documents:", error);
-    return []; // Return empty results instead of throwing
+    return [];
   }
 };
 
 // Helper function for in-memory search
 const searchInMemory = (queryEmbedding: number[], topK: number): DocumentChunk[] => {
-  // If the vector database is empty, return empty results
-  if (inMemoryVectorDB.length === 0) {
-    return [];
-  }
+  if (inMemoryVectorDB.length === 0) return [];
   
-  // Calculate similarity scores
   const similarities = inMemoryVectorDB.map(doc => ({
     document: {
       id: doc.id,
@@ -226,7 +242,6 @@ const searchInMemory = (queryEmbedding: number[], topK: number): DocumentChunk[]
     score: cosineSimilarity(queryEmbedding, doc.embedding)
   }));
   
-  // Sort by similarity score and get top K results
   similarities.sort((a, b) => b.score - a.score);
   const topResults = similarities.slice(0, topK);
   
@@ -234,12 +249,43 @@ const searchInMemory = (queryEmbedding: number[], topK: number): DocumentChunk[]
 };
 
 // Clear the vector database (for testing/reset purposes)
-export const clearVectorDatabase = (): void => {
+export const clearVectorDatabase = async (
+  pineconeApiKey?: string,
+  pineconeEnvironment?: string
+): Promise<void> => {
+  // Clear in-memory database
   inMemoryVectorDB = [];
+  
+  // Clear Pinecone namespace if credentials are provided
+  if (pineconeApiKey && pineconeEnvironment) {
+    try {
+      const pinecone = initPinecone(pineconeApiKey, pineconeEnvironment);
+      const index = pinecone.index(PINECONE_INDEX_NAME);
+      await index.namespace(PINECONE_NAMESPACE).deleteAll();
+      console.log(`Cleared Pinecone namespace: ${PINECONE_NAMESPACE}`);
+    } catch (error) {
+      console.error("Error clearing Pinecone namespace:", error);
+    }
+  }
+  
   console.log("Vector database cleared");
 };
 
 // Get the count of documents in the database
-export const getDocumentCount = (): number => {
+export const getDocumentCount = async (
+  pineconeApiKey?: string,
+  pineconeEnvironment?: string
+): Promise<number> => {
+  if (pineconeApiKey && pineconeEnvironment) {
+    try {
+      const pinecone = initPinecone(pineconeApiKey, pineconeEnvironment);
+      const index = pinecone.index(PINECONE_INDEX_NAME);
+      const stats = await index.namespace(PINECONE_NAMESPACE).describeIndexStats();
+      return stats.totalRecordCount || 0;
+    } catch (error) {
+      console.error("Error getting Pinecone document count:", error);
+      return inMemoryVectorDB.length;
+    }
+  }
   return inMemoryVectorDB.length;
 };
