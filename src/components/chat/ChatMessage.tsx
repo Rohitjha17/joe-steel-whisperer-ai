@@ -4,22 +4,22 @@ import { Message } from "@/types/chat";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
-// Premium chat message with glass effect; user and Joe stylized
+// Clean, aligned, subtle message bubbles (ChatGPT vibe).
 export function ChatMessage({ message }: { message: Message }) {
   const isUser = message.role === "user";
   return (
     <div
       className={cn(
-        "flex w-full gap-5 md:gap-8 px-1",
+        "flex w-full gap-3",
         isUser ? "justify-end" : "justify-start"
       )}
     >
       {!isUser && (
         <div className="flex-shrink-0">
-          <Avatar className="h-14 w-14 bg-steel-700 border-2 border-steel-300 shadow-md overflow-hidden">
+          <Avatar className="h-11 w-11 bg-steel-100 border border-steel-300 shadow">
             <img
               className="h-full w-full object-cover rounded-full"
-              src="/lovable-uploads/b211768e-5f5f-4d1f-a689-9503b674638a.png"
+              src="/lovable-uploads/782b9ab1-c9c7-4b24-8b4a-afca4b92620b.png"
               alt="Joe"
             />
           </Avatar>
@@ -28,14 +28,13 @@ export function ChatMessage({ message }: { message: Message }) {
 
       <div
         className={cn(
-          "relative max-w-[82vw] md:max-w-[58vw] rounded-xl py-4 px-6 shadow-lg",
-          "glass-morphism-strong border border-steel-200/70",
+          "relative max-w-[80vw] md:max-w-[40vw] rounded-xl py-3 px-5 shadow-sm",
           isUser
-            ? "bg-primary/95 text-primary-foreground"
-            : "bg-white/90 text-steel-900 dark:bg-steel-900/90 dark:text-steel-100"
+            ? "bg-steel-800 text-white"
+            : "bg-white text-steel-900 border border-steel-100"
         )}
       >
-        <div className="prose prose-base dark:prose-invert break-words font-medium tracking-wide">
+        <div className="break-words font-medium text-base">
           {message.content.split("\n").map((line, i) => (
             <React.Fragment key={i}>
               {line}
@@ -45,7 +44,7 @@ export function ChatMessage({ message }: { message: Message }) {
         </div>
         <div
           className={cn(
-            "mt-2 text-xs select-none opacity-55 tracking-wider",
+            "mt-2 text-xs opacity-60 tracking-wide",
             isUser ? "text-right" : "text-left"
           )}
         >
@@ -55,11 +54,10 @@ export function ChatMessage({ message }: { message: Message }) {
           })}
         </div>
       </div>
-
       {isUser && (
         <div className="flex-shrink-0">
-          <Avatar className="h-14 w-14 bg-steel-500 text-white border-2 border-steel-300 shadow-md flex items-center justify-center">
-            <div className="text-xl font-extrabold">U</div>
+          <Avatar className="h-11 w-11 bg-steel-300 text-white flex items-center justify-center font-bold text-lg">
+            U
           </Avatar>
         </div>
       )}

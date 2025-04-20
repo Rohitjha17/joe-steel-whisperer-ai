@@ -4,68 +4,50 @@ import { Message } from "@/types/chat";
 import { ChatMessage } from "./ChatMessage";
 import { Loader2 } from "lucide-react";
 
-// Stunning high-class glass panel, perfectly scrollable, immersive experience
+// Modern style scrollable chat panel, smooth
 export function ChatWindow({ messages, isLoading }: { messages: Message[], isLoading: boolean }) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollableRef = useRef<HTMLDivElement>(null);
 
-  // Always scroll to bottom when messages change
   useEffect(() => {
-    if (messagesEndRef.current && scrollableRef.current) {
-      // Scroll to bottom smoothly
-      scrollableRef.current.scrollTo({
-        top: scrollableRef.current.scrollHeight,
-        behavior: "smooth",
-      });
+    if (scrollableRef.current) {
+      scrollableRef.current.scrollTop = scrollableRef.current.scrollHeight;
     }
   }, [messages, isLoading]);
 
   const showWelcomeMessage = messages.length === 0;
 
   return (
-    <div className="flex-1 relative overflow-hidden">
+    <div className="relative flex-1 min-h-0">
       <div
         ref={scrollableRef}
-        className="
-          h-full w-full overflow-y-auto
-          scrollbar-thin scrollbar-thumb-steel-400 scrollbar-track-steel-100
-          glass-morphism-strong
-          bg-gradient-to-br from-white/75 via-steel-100/70 to-steel-300/50
-          px-3 md:px-8 py-8
-          rounded-[32px]
-          border border-steel-200
-          shadow-2xl
-          animate-fade-in
-          transition-all duration-300
-          "
+        className="h-full w-full overflow-y-auto bg-white/90 px-3 py-6 rounded-xl border border-steel-100 shadow-inner scrollbar-thin scrollbar-thumb-steel-300 scrollbar-track-steel-50"
         style={{
-          maxHeight: "60vh",
           minHeight: "340px",
-          backdropFilter: "blur(24px) brightness(0.98)",
+          maxHeight: "380px",
+          height: "100%"
         }}
       >
         {showWelcomeMessage ? (
-          <div className="flex h-full items-center justify-center animate-fade-in">
-            <div className="max-w-xl w-full mx-auto text-center p-10 rounded-3xl bg-white/95 shadow-2xl ring-2 ring-steel-200 glass-morphism-strong border border-steel-200">
-              <h2 className="text-4xl md:text-5xl font-extrabold font-playfair mb-3 text-steel-800 tracking-wide drop-shadow">
-                Hello, I'm Joe
+          <div className="flex h-full items-center justify-center">
+            <div className="max-w-xl w-full mx-auto text-center p-8 rounded-lg bg-white/80 shadow-lg border border-steel-100">
+              <h2 className="text-3xl font-bold font-playfair mb-2 text-steel-800">
+                Welcome to Joe's Steel Chat
               </h2>
-              <p className="text-steel-600 mb-4 text-lg md:text-xl">
-                With <b>40 years</b> of steel industry experience,<br />
-                I'm here for procurement, inventory, quality checks,<br />
-                sales, and production questions.<br />
-                <span className="text-steel-500">How can I amaze you today?</span>
+              <p className="text-steel-600 mb-1 text-base">
+                Powered by 40+ years of experience.<br />
+                Ask me anything about operations, procurement, quality or production!
               </p>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col space-y-7 pb-8">
+          <div className="flex flex-col space-y-6">
             {messages.map((message) => (
               <ChatMessage key={message.id} message={message} />
             ))}
             {isLoading && (
-              <div className="flex justify-center p-6">
-                <Loader2 className="h-8 w-8 animate-spin text-steel-400 opacity-80" />
+              <div className="flex justify-center pt-2">
+                <Loader2 className="h-7 w-7 animate-spin text-steel-300" />
               </div>
             )}
             <div ref={messagesEndRef} />
