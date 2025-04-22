@@ -17,8 +17,8 @@ export function SteelChatbot({ minimalSidebar }: SteelChatbotProps = {}) {
 
   return (
     <div className="flex flex-col h-[95vh] overflow-hidden">
-      {/* Joe Avatar Section - Made bigger with more space */}
-      <div className="w-full flex flex-col items-center justify-center py-8">
+      {/* Joe Avatar Section - 75% of the vertical space */}
+      <div className="w-full flex flex-col items-center justify-center py-8 h-[75%]">
         <JoeAvatar />
         
         <div className="flex items-center gap-3 mt-6">
@@ -36,14 +36,17 @@ export function SteelChatbot({ minimalSidebar }: SteelChatbotProps = {}) {
         </div>
       </div>
 
-      {/* Chat Display */}
-      <div className="flex-1 overflow-y-auto">
-        <ChatWindow messages={state.messages} isLoading={state.isLoading} />
-      </div>
+      {/* Chat Display and Input - 25% of the vertical space */}
+      <div className="h-[25%] flex flex-col">
+        {/* Chat Display */}
+        <div className="flex-1 overflow-y-auto">
+          <ChatWindow messages={state.messages} isLoading={state.isLoading} />
+        </div>
 
-      {/* Chat Input */}
-      <div className="p-4">
-        <ChatInput onSendMessage={sendMessage} isLoading={state.isLoading} />
+        {/* Chat Input */}
+        <div className="p-4">
+          <ChatInput onSendMessage={sendMessage} isLoading={state.isLoading} />
+        </div>
       </div>
     </div>
   );
