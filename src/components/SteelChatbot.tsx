@@ -17,11 +17,11 @@ export function SteelChatbot({ minimalSidebar }: SteelChatbotProps = {}) {
 
   return (
     <div className="flex flex-col h-[95vh] overflow-hidden">
-      {/* Joe Avatar Section */}
-      <div className="w-full flex flex-col items-center justify-center py-6">
+      {/* Joe Avatar Section - Made bigger with more space */}
+      <div className="w-full flex flex-col items-center justify-center py-8">
         <JoeAvatar />
         
-        <div className="flex items-center gap-3 mt-4">
+        <div className="flex items-center gap-3 mt-6">
           <ApiKeyInput />
           <Button
             variant="outline"
