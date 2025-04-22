@@ -8,7 +8,11 @@ import { JoeAvatar } from "./chat/JoeAvatar";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 
-export function SteelChatbot() {
+interface SteelChatbotProps {
+  minimalSidebar?: boolean;
+}
+
+export function SteelChatbot({ minimalSidebar }: SteelChatbotProps = {}) {
   const { state, sendMessage, clearChat } = useChat();
 
   return (
