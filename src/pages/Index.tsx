@@ -5,8 +5,8 @@ import { ChatProvider } from "@/context/ChatContext";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-white p-4 md:p-8 flex items-center justify-center">
-      <div className="container mx-auto max-w-3xl h-[calc(100vh-4rem)]">
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="w-full h-[calc(100vh-2rem)]">
         <ChatProvider>
           <SteelChatbot />
         </ChatProvider>

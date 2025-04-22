@@ -25,9 +25,9 @@ export function JoeAvatar() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full">
+    <div className="flex flex-col items-center justify-center h-full w-full">
       <div className="relative">
-        <Avatar className={`h-52 w-52 md:h-72 md:w-72 lg:h-96 lg:w-96 ${getAnimationClass()}`}>
+        <Avatar className={`h-64 w-64 md:h-80 md:w-80 lg:h-96 lg:w-96 ${getAnimationClass()}`}>
           <AvatarImage
             src="/lovable-uploads/badd8c45-08b2-4c69-a3c3-8f33e10750e5.png"
             alt="Joe - Steel Industry Expert"
@@ -43,7 +43,7 @@ export function JoeAvatar() {
           {/* This div just adds the floating animation */}
         </div>
       </div>
-      <div className="mt-4 text-2xl font-semibold tracking-wide text-center">
+      <div className="mt-6 text-3xl font-semibold tracking-wide text-center text-steel-800">
         Joe – Your Steel Industry Expert
       </div>
     </div>
