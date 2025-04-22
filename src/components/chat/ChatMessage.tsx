@@ -4,22 +4,21 @@ import { Message } from "@/types/chat";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
-// Clean, aligned, subtle message bubbles (ChatGPT vibe).
 export function ChatMessage({ message }: { message: Message }) {
   const isUser = message.role === "user";
   return (
     <div
       className={cn(
-        "flex w-full gap-3",
+        "flex w-full gap-3 px-4",
         isUser ? "justify-end" : "justify-start"
       )}
     >
       {!isUser && (
         <div className="flex-shrink-0">
-          <Avatar className="h-11 w-11 bg-steel-100 border border-steel-300 shadow">
+          <Avatar className="h-10 w-10 bg-steel-100 border border-steel-300 shadow">
             <img
               className="h-full w-full object-cover rounded-full"
-              src="/lovable-uploads/782b9ab1-c9c7-4b24-8b4a-afca4b92620b.png"
+              src="/lovable-uploads/badd8c45-08b2-4c69-a3c3-8f33e10750e5.png"
               alt="Joe"
             />
           </Avatar>
@@ -28,7 +27,7 @@ export function ChatMessage({ message }: { message: Message }) {
 
       <div
         className={cn(
-          "relative max-w-[80vw] md:max-w-[40vw] rounded-xl py-3 px-5 shadow-sm",
+          "relative max-w-[80%] rounded-xl py-3 px-4 shadow-sm",
           isUser
             ? "bg-steel-800 text-white"
             : "bg-white text-steel-900 border border-steel-100"
@@ -56,7 +55,7 @@ export function ChatMessage({ message }: { message: Message }) {
       </div>
       {isUser && (
         <div className="flex-shrink-0">
-          <Avatar className="h-11 w-11 bg-steel-300 text-white flex items-center justify-center font-bold text-lg">
+          <Avatar className="h-10 w-10 bg-steel-300 text-white flex items-center justify-center font-bold text-lg">
             U
           </Avatar>
         </div>
