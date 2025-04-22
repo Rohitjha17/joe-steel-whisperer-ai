@@ -6,7 +6,7 @@ export function JoeAvatar() {
   return (
     <div className="flex flex-col items-center">
       <div className="relative">
-        <Avatar className="h-28 w-28 md:h-36 md:w-36 border-4 border-steel-300 shadow-xl bg-white animate-pulse">
+        <Avatar className="h-32 w-32 md:h-40 md:w-40 animate-pulse">
           <AvatarImage
             src="/lovable-uploads/badd8c45-08b2-4c69-a3c3-8f33e10750e5.png"
             alt="Joe - Steel Industry Expert"
@@ -17,7 +17,7 @@ export function JoeAvatar() {
           </AvatarFallback>
         </Avatar>
       </div>
-      <div className="mt-3 text-lg text-steel-700 font-semibold tracking-wide text-center drop-shadow-sm">
+      <div className="mt-3 text-lg font-semibold tracking-wide text-center">
         Joe – Your Steel Industry Expert
       </div>
     </div>

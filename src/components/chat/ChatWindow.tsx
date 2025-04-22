@@ -28,12 +28,9 @@ export function ChatWindow({ messages, isLoading }: { messages: Message[], isLoa
       >
         {showWelcome ? (
           <div className="flex h-full items-center justify-center px-4">
-            <div className="max-w-xl mx-auto text-center p-6 rounded-xl bg-white/90 shadow-lg border border-steel-100">
-              <h2 className="text-2xl font-bold mb-2 text-steel-800">
-                Welcome to Joe's Steel Chat
-              </h2>
-              <p className="text-steel-600 mb-2">
-                Ask anything about operations, procurement, quality, or production.
+            <div className="max-w-xl mx-auto text-center p-6">
+              <p className="text-gray-600">
+                Ask Joe anything about steel operations, procurement, quality, or production.
               </p>
             </div>
           </div>
@@ -44,7 +41,7 @@ export function ChatWindow({ messages, isLoading }: { messages: Message[], isLoa
             ))}
             {isLoading && (
               <div className="flex justify-center pt-2">
-                <Loader2 className="h-7 w-7 animate-spin text-steel-300" />
+                <Loader2 className="h-7 w-7 animate-spin text-gray-300" />
               </div>
             )}
           </div>
