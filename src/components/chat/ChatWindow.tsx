@@ -16,10 +16,10 @@ export function ChatWindow({ messages, isLoading }: { messages: Message[], isLoa
   const showWelcome = messages.length === 0;
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <div className="h-full w-full flex flex-col bg-white">
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto py-4 custom-scrollbar"
+        className="flex-1 overflow-y-auto py-12 px-6 custom-scrollbar"
         tabIndex={0}
         style={{
           scrollbarWidth: "thin",
@@ -28,8 +28,8 @@ export function ChatWindow({ messages, isLoading }: { messages: Message[], isLoa
       >
         {showWelcome ? (
           <div className="flex h-full items-center justify-center px-4">
-            <div className="max-w-xl mx-auto text-center p-6">
-              <p className="text-gray-600">
+            <div className="max-w-xl mx-auto text-center p-2">
+              <p className="text-gray-400 text-lg">
                 Ask Joe anything about steel operations, procurement, quality, or production.
               </p>
             </div>
@@ -50,3 +50,4 @@ export function ChatWindow({ messages, isLoading }: { messages: Message[], isLoa
     </div>
   );
 }
+

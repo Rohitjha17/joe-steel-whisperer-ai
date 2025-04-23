@@ -8,7 +8,7 @@ export function JoeAvatar() {
   useEffect(() => {
     const intervalId = setInterval(() => {
       setAnimationState((prev) => (prev + 1) % 3);
-    }, 2000);
+    }, 2200);
 
     return () => clearInterval(intervalId);
   }, []);
@@ -32,26 +32,37 @@ export function JoeAvatar() {
       style={{
         flex: "1 1 0%",
         height: "100%",
+        maxHeight: "100%",
       }}
     >
-      {/* Large rectangular avatar image, landscape, B&W */}
-      <div className="relative w-full flex-1 flex items-center rounded-[1.8rem] overflow-hidden">
+      {/* Landscape, massive avatar image */}
+      <div className="relative w-full flex items-end rounded-[2.3rem] overflow-hidden bg-[#222]"
+        style={{
+          // Large, landscape rectangle (phone inside phone)
+          aspectRatio: "16/9",
+          height: "calc(100vh * 0.64)",
+          maxHeight: "550px",
+          boxShadow: "0 8px 32px 6px rgba(0,0,0,0.45)",
+          minHeight: "230px",
+        }}
+      >
         <img
-          src="/lovable-uploads/badd8c45-08b2-4c69-a3c3-8f33e10750e5.png"
+          src="/lovable-uploads/c354a583-7f30-4038-85c5-7413ddb2217c.png"
           alt="Joe - Steel Industry Expert"
           className="object-cover w-full h-full grayscale"
           style={{
-            minHeight: 0,
-            minWidth: 0,
-            aspectRatio: "370/600",
-            // aspect ratio is overridden by phone container, just auto-fit
+            minHeight: "100%",
+            minWidth: "100%",
+            objectFit: "cover",
+            filter: "grayscale(1)",
+            aspectRatio: "16/9",
           }}
         />
         {/* Optional: overlay bottom gradient for foregrounding name */}
-        <div className="absolute bottom-0 left-0 w-full h-28 bg-gradient-to-t from-black/85 via-black/40 to-transparent z-10 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-black/85 via-black/40 to-transparent z-10 pointer-events-none" />
         {/* Name overlay */}
-        <div className="absolute bottom-3 left-0 w-full flex justify-center z-20">
-          <div className="text-white text-2xl font-extrabold drop-shadow-md tracking-wide bg-black/50 px-6 py-1 rounded-full backdrop-blur-xs">
+        <div className="absolute bottom-4 left-0 w-full flex justify-center z-20">
+          <div className="text-white text-2xl font-extrabold drop-shadow-md tracking-wide bg-black/50 px-8 py-2 rounded-full backdrop-blur-xs">
             Joe – Your Steel Industry Expert
           </div>
         </div>
@@ -59,3 +70,4 @@ export function JoeAvatar() {
     </div>
   );
 }
+

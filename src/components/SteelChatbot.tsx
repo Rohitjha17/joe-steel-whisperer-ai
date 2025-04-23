@@ -17,26 +17,28 @@ export function SteelChatbot({ minimalSidebar }: SteelChatbotProps = {}) {
 
   return (
     <div className="flex h-[95vh] w-full overflow-hidden bg-white">
-      {/* Avatar Left Side: 75% (Phone Simulation) */}
+      {/* Avatar Left Side: 75% (Large phone display) */}
       <div className="w-[75%] flex flex-col items-center justify-center bg-[#18191C] transition-colors duration-500">
-        <div className="flex flex-col items-center justify-center h-full">
-          {/* Simulated Phone */}
+        <div className="flex flex-col items-center justify-center h-full w-full">
+          {/* GIANT Phone */}
           <div
-            className="relative flex flex-col items-center bg-black shadow-2xl border-4 border-[#222] rounded-[2.5rem] p-1"
+            className="relative flex flex-col items-center justify-center bg-black shadow-2xl border-4 border-[#222] rounded-[2.75rem] px-2 py-2"
             style={{
-              width: "370px",
-              height: "760px",
-              maxWidth: "90vw",
-              maxHeight: "88vh",
+              width: "calc(100vw * 0.65)", // Large width, fills the section nearly edge to edge, responsive
+              maxWidth: "890px",
+              height: "calc(100vh * 0.84)",
+              minHeight: 0,
               boxShadow:
-                "0 8px 40px 4px rgba(0,0,0,0.45), 0 2px 8px 0 rgba(0,0,0,0.15)",
-              background:
-                "linear-gradient(140deg, #222 82%, #31323a 100%)",
+                "0 12px 64px 10px rgba(0,0,0,0.45), 0 3px 16px 0 rgba(0,0,0,0.15)",
+              background: "linear-gradient(140deg, #222 82%, #31323a 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            {/* Simulated Notch */}
-            <div className="w-24 h-2.5 bg-[#222b] rounded-b-xl mx-auto mt-2 mb-3" />
-            {/* Full Rectangular JoeAvatar inside phone */}
+            {/* Fake notch */}
+            <div className="w-32 h-3 bg-[#222b] rounded-b-xl mx-auto mt-3 mb-4" />
+            {/* JoeAvatar fills below notch */}
             <JoeAvatar />
           </div>
           <div className="flex items-center gap-3 mt-8">
@@ -45,7 +47,7 @@ export function SteelChatbot({ minimalSidebar }: SteelChatbotProps = {}) {
               variant="outline"
               size="icon"
               onClick={clearChat}
-              className="h-9 w-9 hover:bg-black hover:text-white bg-white text-black border-black"
+              className="h-10 w-10 hover:bg-black hover:text-white bg-white text-black border-black"
               title="Clear chat"
             >
               <Trash2 className="h-5 w-5" />
@@ -55,14 +57,15 @@ export function SteelChatbot({ minimalSidebar }: SteelChatbotProps = {}) {
         </div>
       </div>
       {/* Chat Right Side: 25% */}
-      <div className="w-[25%] flex flex-col bg-white text-black border-l border-black">
-        <div className="flex-1 overflow-y-auto">
+      <div className="w-[25%] flex flex-col bg-white text-black border-l border-black min-h-0 h-full">
+        <div className="flex-1 flex flex-col justify-end overflow-y-auto" style={{ minHeight: 0 }}>
           <ChatWindow messages={state.messages} isLoading={state.isLoading} />
         </div>
-        <div className="p-4 border-t border-black bg-white">
+        <div className="p-5 border-t border-black bg-white" style={{ minHeight: "110px" }}>
           <ChatInput onSendMessage={sendMessage} isLoading={state.isLoading} />
         </div>
       </div>
     </div>
   );
 }
+

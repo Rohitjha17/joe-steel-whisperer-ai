@@ -27,20 +27,20 @@ export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
   };
 
   return (
-    <div className="flex items-end gap-2 border-t bg-background p-4">
+    <div className="flex items-end gap-2 border-t bg-background px-0 pt-0 pb-0">
       <Textarea
-        placeholder="Ask Joe about steel industry operations..."
+        placeholder="Type a message for Joe…"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="min-h-[60px] resize-none rounded-lg border-steel-200 bg-white px-3 py-2 shadow-sm focus-visible:ring-steel-500"
+        className="min-h-[48px] resize-none rounded-xl border border-gray-200 bg-white px-3 py-2 shadow focus-visible:ring-black focus-visible:ring-1"
         rows={1}
       />
       <Button 
         onClick={handleSendMessage}
         disabled={!message.trim() || isLoading}
         size="icon"
-        className="h-10 w-10 shrink-0 rounded-full bg-accent hover:bg-accent/90 text-accent-foreground"
+        className="h-10 w-10 shrink-0 rounded-full bg-black hover:bg-gray-800 text-white"
       >
         <Send className="h-5 w-5" />
         <span className="sr-only">Send message</span>
@@ -48,3 +48,4 @@ export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
     </div>
   );
 }
+
