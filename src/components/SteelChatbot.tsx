@@ -17,17 +17,16 @@ export function SteelChatbot({ minimalSidebar }: SteelChatbotProps = {}) {
 
   return (
     <div className="flex h-[95vh] overflow-hidden">
-      {/* Joe Avatar Section - 75% width of the screen */}
-      <div className="w-[75%] flex flex-col items-center justify-center py-8 bg-gray-50">
+      {/* Joe Avatar Section - Left (75%) */}
+      <div className="w-[75%] flex flex-col items-center justify-center py-8 bg-white border-r border-black">
         <JoeAvatar />
-        
-        <div className="flex items-center gap-3 mt-6">
+        <div className="flex items-center gap-3 mt-8">
           <ApiKeyInput />
           <Button
             variant="outline"
             size="icon"
             onClick={clearChat}
-            className="h-9 w-9 hover:bg-gray-100 text-gray-700"
+            className="h-9 w-9 hover:bg-black hover:text-white bg-white text-black border-black"
             title="Clear chat"
           >
             <Trash2 className="h-5 w-5" />
@@ -36,15 +35,15 @@ export function SteelChatbot({ minimalSidebar }: SteelChatbotProps = {}) {
         </div>
       </div>
 
-      {/* Chat Display and Input - 25% width of the screen */}
-      <div className="w-[25%] flex flex-col border-l border-steel-200">
+      {/* Chat Display and Input - Right (25%) */}
+      <div className="w-[25%] flex flex-col bg-black text-white border-l border-black">
         {/* Chat Display */}
         <div className="flex-1 overflow-y-auto">
           <ChatWindow messages={state.messages} isLoading={state.isLoading} />
         </div>
 
         {/* Chat Input */}
-        <div className="p-4">
+        <div className="p-4 border-t border-black bg-black">
           <ChatInput onSendMessage={sendMessage} isLoading={state.isLoading} />
         </div>
       </div>
