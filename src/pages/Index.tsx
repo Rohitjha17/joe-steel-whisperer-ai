@@ -5,8 +5,9 @@ import { ChatProvider } from "@/context/ChatContext";
 const Index = () => {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="w-full h-[calc(100vh-2rem)]">
-        <div className="w-[400px] h-[400px] mx-auto mb-8 rounded-lg overflow-hidden shadow-lg">
+      <div className="w-full h-[calc(100vh-2rem)] flex">
+        {/* Avatar on the left */}
+        <div className="w-[400px] h-[400px] mr-8 rounded-lg overflow-hidden shadow-lg self-center">
           <img
             src="/lovable-uploads/123.png"
             alt="Avatar"
@@ -17,9 +18,12 @@ const Index = () => {
             }}
           />
         </div>
-        <ChatProvider>
-          <SteelChatbot />
-        </ChatProvider>
+        {/* Chat area on the right */}
+        <div className="flex-1">
+          <ChatProvider>
+            <SteelChatbot />
+          </ChatProvider>
+        </div>
       </div>
     </div>
   );
