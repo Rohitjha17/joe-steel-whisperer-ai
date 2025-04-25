@@ -1,17 +1,18 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { KnowledgeUploader } from "./KnowledgeUploader";
 import { SteelChatbot } from "./SteelChatbot";
 import { Book, MessageSquare } from "lucide-react";
+
 /**
- * A simple sliding panel to switch between Chat and Knowledge Base
+ * A sliding panel that smoothly transitions between Chat and Knowledge views
  */
 export function SlidingPanel() {
   const [activePanel, setActivePanel] = useState<"chat" | "knowledge">("chat");
 
   return (
-    <div className="h-screen flex flex-col w-full bg-stone-50 relative">
+    <div className="h-screen relative flex flex-col w-full bg-stone-50">
+      {/* Header Tabs */}
       <div className="flex items-center gap-2 w-full bg-white px-4 py-3 shadow-md border-b border-steel-200 z-20">
         <Button
           variant={activePanel === "chat" ? "default" : "outline"}
@@ -30,30 +31,49 @@ export function SlidingPanel() {
           Knowledge Base
         </Button>
       </div>
-      <div className="flex-1 flex">
-        {activePanel === "chat" && (
-          <div className="flex-1 flex overflow-hidden h-full relative animate-fade-in">
+
+      {/* Sliding Container */}
+      <div className="relative flex-1 overflow-hidden">
+        {/* Chat Panel */}
+        <div
+          className={`
+            absolute inset-0
+            transition-transform duration-300 ease-in-out
+            ${activePanel === "chat" ? "translate-x-0" : "-translate-x-full"}
+          `}
+        >
+          <div className="h-full flex overflow-hidden relative">
             <FloatingAvatar />
             <SteelChatbot minimalSidebar />
           </div>
-        )}
-        {activePanel === "knowledge" && (
-          <div className="flex-1 flex justify-center items-start p-0 overflow-auto animate-fade-in bg-gradient-to-b from-steel-50 to-steel-100">
-            <div className="w-full max-w-xl mx-auto mt-6"><KnowledgeUploader /></div>
+        </div>
+
+        {/* Knowledge Panel */}
+        <div
+          className={`
+            absolute inset-0
+            transition-transform duration-300 ease-in-out
+            ${activePanel === "knowledge" ? "translate-x-0" : "translate-x-full"}
+          `}
+        >
+          <div className="h-full flex justify-center items-start overflow-auto bg-gradient-to-b from-steel-50 to-steel-100">
+            <div className="w-full max-w-xl mx-auto mt-6">
+              <KnowledgeUploader />
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
 }
 
-// Avatar floating for the chat area (hardcoded image, update here if needed)
+// Floating Joe avatar in the chat panel
 function FloatingAvatar() {
   return (
     <img
-      src="/lovable-uploads/782b9ab1-c9c7-4b24-8b4a-afca4b92620b.png"
+      src="/lovable-uploads/123.png"
       alt="Joe Avatar"
-      className="absolute left-8 top-0 rounded-full border-4 border-white shadow-md w-16 h-16 z-30 bg-white animate-fade-in"
+      className="absolute left-8 top-0 rounded-full border-4 border-white shadow-md w-16 h-16 z-30 bg-white"
       style={{ transform: "translateY(-55%)" }}
     />
   );
