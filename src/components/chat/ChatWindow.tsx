@@ -1,52 +1,41 @@
-
-import React, { useRef, useEffect } from "react";
-import { Message } from "@/types/chat";
-import { ChatMessage } from "./ChatMessage";
+import React from "react";
+import { Message } from "../../types/chat";
 import { Loader2 } from "lucide-react";
 
-export function ChatWindow({ messages, isLoading }: { messages: Message[], isLoading: boolean }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+interface ChatWindowProps {
+  messages: Message[];
+  isLoading: boolean;
+}
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isLoading]);
-
-  const showWelcome = messages.length === 0;
-
+export function ChatWindow({ messages, isLoading }: ChatWindowProps) {
   return (
-    <div className="h-full w-full flex flex-col bg-white">
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto py-12 px-6 custom-scrollbar"
-        tabIndex={0}
-        style={{
-          scrollbarWidth: "thin",
-          minHeight: "300px",
-        }}
-      >
-        {showWelcome ? (
-          <div className="flex h-full items-center justify-center px-4">
-            <div className="max-w-xl mx-auto text-center p-2">
-              <p className="text-gray-400 text-lg">
-                Ask Joe anything about steel operations, procurement, quality, or production.
-              </p>
-            </div>
+    <div className="flex flex-col space-y-4 p-4">
+      {messages.map((message) => (
+        <div
+          key={message.id}
+          className={`flex flex-col ${
+            message.role === "assistant" ? "items-start" : "items-end"
+          }`}
+        >
+          <div
+            className={`max-w-[85%] rounded-lg p-3 ${
+              message.role === "assistant"
+                ? "bg-black text-white"
+                : "bg-gray-100 text-black"
+            }`}
+          >
+            <p className="whitespace-pre-wrap">{message.content}</p>
           </div>
-        ) : (
-          <div className="flex flex-col gap-6">
-            {messages.map((m) => (
-              <ChatMessage key={m.id} message={m} />
-            ))}
-            {isLoading && (
-              <div className="flex justify-center pt-2">
-                <Loader2 className="h-7 w-7 animate-spin text-gray-300" />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+          <span className="text-xs text-gray-500 mt-1">
+            {message.timestamp.toLocaleTimeString()}
+          </span>
+        </div>
+      ))}
+      {isLoading && (
+        <div className="flex justify-center">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      )}
     </div>
   );
 }

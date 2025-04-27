@@ -1,7 +1,10 @@
-
 import React, { useEffect, useState } from "react";
 
-export function JoeAvatar() {
+interface JoeAvatarProps {
+  isSpeaking?: boolean;
+}
+
+export function JoeAvatar({ isSpeaking = false }: JoeAvatarProps) {
   const [animationState, setAnimationState] = useState(0);
 
   // Subtle breathing animation (slight scale in/out)
@@ -14,6 +17,9 @@ export function JoeAvatar() {
   }, []);
 
   const getAnimationClass = () => {
+    if (isSpeaking) {
+      return "scale-100 animate-subtle-bounce";
+    }
     switch (animationState) {
       case 0:
         return "scale-100 transition-transform duration-2000";
@@ -33,36 +39,34 @@ export function JoeAvatar() {
         flex: "1 1 0%",
         height: "100%",
         maxHeight: "100%",
+        padding: "0px",
       }}
     >
       {/* Landscape, massive avatar image */}
-      <div className="relative w-full flex items-end rounded-[2.3rem] overflow-hidden bg-[#222]"
+      <div className="relative w-full h-full flex items-start overflow-hidden"
         style={{
-          // Large, landscape rectangle (phone inside phone)
-          aspectRatio: "16/9",
-          height: "calc(100vh * 0.64)",
-          maxHeight: "550px",
-          boxShadow: "0 8px 32px 6px rgba(0,0,0,0.45)",
+          height: "100%",
           minHeight: "230px",
+          display: "flex",
+          alignItems: "flex-start", // Align to top
         }}
       >
         <img
-          src="/lovable-uploads/c354a583-7f30-4038-85c5-7413ddb2217c.png"
+          src="/lovable-uploads/123.png"
           alt="Joe - Steel Industry Expert"
-          className="object-cover w-full h-full grayscale"
+          className={`object-cover w-full h-full ${isSpeaking ? 'animate-subtle-pulse' : ''}`}
           style={{
-            minHeight: "100%",
-            minWidth: "100%",
+            width: "100%",
+            height: "100%",
             objectFit: "cover",
-            filter: "grayscale(1)",
-            aspectRatio: "16/9",
+            objectPosition: "50% 0%", // Align to top
+            transform: "scale(1.3)", // Increased scale more
+            transformOrigin: "top center", // Scale from top
           }}
         />
-        {/* Optional: overlay bottom gradient for foregrounding name */}
-        <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-black/85 via-black/40 to-transparent z-10 pointer-events-none" />
-        {/* Name overlay */}
-        <div className="absolute bottom-4 left-0 w-full flex justify-center z-20">
-          <div className="text-white text-2xl font-extrabold drop-shadow-md tracking-wide bg-black/50 px-8 py-2 rounded-full backdrop-blur-xs">
+        {/* Name overlay - positioned over the image */}
+        <div className="absolute bottom-6 left-0 w-full flex justify-center z-20">
+          <div className="text-white text-2xl font-extrabold drop-shadow-lg tracking-wide bg-black/60 px-8 py-3 rounded-full backdrop-blur-sm">
             Joe – Your Steel Industry Expert
           </div>
         </div>

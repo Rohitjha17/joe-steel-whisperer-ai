@@ -1,153 +1,158 @@
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useState } from "react";
+import { VoiceResponse } from "../components/VoiceResponse";
+import { Message } from "../types/chat";
+import OpenAI from "openai";
 
-import React, { createContext, useContext, useReducer, ReactNode, useEffect } from "react";
-import { ChatState, Message } from "@/types/chat";
-import { sendMessageToChatGPT } from "@/services/chatService";
-import { toast } from "@/components/ui/sonner";
+interface ChatState {
+  messages: Message[];
+  isLoading: boolean;
+  error: string | null;
+}
 
-// Initial state
+interface ChatContextType extends ChatState {
+  sendMessage: (message: string) => Promise<void>;
+  clearChat: () => void;
+  isSpeaking: boolean;
+}
+
+const ChatContext = createContext<ChatContextType | undefined>(undefined);
+
 const initialState: ChatState = {
   messages: [],
   isLoading: false,
   error: null,
-  apiKey: localStorage.getItem("chatgpt_api_key") || null,
 };
 
-// Action types
 type ChatAction =
-  | { type: "ADD_MESSAGE"; payload: Message }
   | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_ERROR"; payload: string | null }
-  | { type: "CLEAR_CHAT" }
-  | { type: "SET_API_KEY"; payload: string | null };
+  | { type: "ADD_MESSAGE"; payload: Message }
+  | { type: "SET_ERROR"; payload: string }
+  | { type: "CLEAR_CHAT" };
 
-// Reducer function
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
+    case "SET_LOADING":
+      return { ...state, isLoading: action.payload, error: null };
     case "ADD_MESSAGE":
       return {
         ...state,
         messages: [...state.messages, action.payload],
-      };
-    case "SET_LOADING":
-      return {
-        ...state,
-        isLoading: action.payload,
+        error: null,
       };
     case "SET_ERROR":
-      return {
-        ...state,
-        error: action.payload,
-      };
+      return { ...state, error: action.payload, isLoading: false };
     case "CLEAR_CHAT":
-      return {
-        ...state,
-        messages: [],
-      };
-    case "SET_API_KEY":
-      return {
-        ...state,
-        apiKey: action.payload,
-      };
+      return { ...initialState };
     default:
       return state;
   }
 }
 
-// Context
-interface ChatContextType {
-  state: ChatState;
-  sendMessage: (content: string) => Promise<void>;
-  clearChat: () => void;
-  setApiKey: (key: string) => void;
-}
-
-const ChatContext = createContext<ChatContextType | undefined>(undefined);
-
-// Provider component
-export function ChatProvider({ children }: { children: ReactNode }) {
+export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(chatReducer, initialState);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentResponse, setCurrentResponse] = useState<string | null>(null);
 
-  // Save API key to localStorage when it changes
-  useEffect(() => {
-    if (state.apiKey) {
-      localStorage.setItem("chatgpt_api_key", state.apiKey);
-    } else {
-      localStorage.removeItem("chatgpt_api_key");
+  const sendMessage = useCallback(async (message: string) => {
+    const apiKey = localStorage.getItem('api_key');
+    if (!apiKey) {
+      dispatch({
+        type: "SET_ERROR",
+        payload: "Please set your OpenAI API key first",
+      });
+      return;
     }
-  }, [state.apiKey]);
 
-  // Send a message
-  const sendMessage = async (content: string) => {
-    if (!content.trim()) return;
-
+    dispatch({ type: "SET_LOADING", payload: true });
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       role: "user",
-      content,
+      content: message,
       timestamp: new Date(),
     };
-
-    // Add user message to state
     dispatch({ type: "ADD_MESSAGE", payload: userMessage });
-    
-    // Set loading state
-    dispatch({ type: "SET_LOADING", payload: true });
-    
+
     try {
-      console.log("Sending message to AI with API key:", state.apiKey ? "API key provided" : "No API key");
-      
-      // Get response from AI
-      const messages = [...state.messages, userMessage];
-      const response = await sendMessageToChatGPT(messages, state.apiKey);
-      
-      console.log("Received AI response:", response);
-      
-      // Add AI response to state
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+      const openai = new OpenAI({
+        apiKey: apiKey,
+        dangerouslyAllowBrowser: true
+      });
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: "You are Joe, an expert in the steel industry. You have extensive knowledge about steel operations, procurement, quality control, and production processes. Provide detailed, accurate, and practical advice while maintaining a professional yet approachable tone."
+          },
+          ...state.messages.map(m => ({
+            role: m.role,
+            content: m.content
+          })),
+          { role: "user", content: message }
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      });
+
+      const assistantMessage = response.choices[0]?.message?.content;
+      if (!assistantMessage) throw new Error("No response from API");
+
+      const fullAssistantMessage: Message = {
+        id: crypto.randomUUID(),
         role: "assistant",
-        content: response,
+        content: assistantMessage,
         timestamp: new Date(),
       };
-      
-      dispatch({ type: "ADD_MESSAGE", payload: assistantMessage });
-      dispatch({ type: "SET_ERROR", payload: null });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-      dispatch({ type: "SET_ERROR", payload: errorMessage });
-      
-      toast.error("AI Response Error", {
-        description: errorMessage
+
+      dispatch({
+        type: "ADD_MESSAGE",
+        payload: fullAssistantMessage,
       });
       
-      console.error("Chat error:", error);
+      // Set the current response for voice synthesis
+      setCurrentResponse(assistantMessage);
+
+    } catch (error) {
+      console.error('Chat error:', error);
+      dispatch({
+        type: "SET_ERROR",
+        payload: "Failed to get response from OpenAI. Please check your API key and try again.",
+      });
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });
     }
-  };
+  }, [state.messages]);
 
-  // Clear chat
-  const clearChat = () => {
+  const clearChat = useCallback(() => {
     dispatch({ type: "CLEAR_CHAT" });
-  };
-
-  // Set API key
-  const setApiKey = (key: string) => {
-    dispatch({ type: "SET_API_KEY", payload: key });
-    toast.success(key ? "API Key Set" : "API Key Cleared", {
-      description: key ? "Using OpenAI API for responses" : "Using simulated responses"
-    });
-    console.log("API key " + (key ? "set" : "cleared"));
-  };
+  }, []);
 
   return (
-    <ChatContext.Provider value={{ state, sendMessage, clearChat, setApiKey }}>
+    <ChatContext.Provider
+      value={{
+        ...state,
+        sendMessage,
+        clearChat,
+        isSpeaking,
+      }}
+    >
       {children}
+      {/* Voice response component */}
+      {currentResponse && (
+        <VoiceResponse
+          text={currentResponse}
+          onStart={() => setIsSpeaking(true)}
+          onEnd={() => {
+            setIsSpeaking(false);
+            setCurrentResponse(null);
+          }}
+        />
+      )}
     </ChatContext.Provider>
   );
 }
 
-// Custom hook to use the chat context
 export function useChat() {
   const context = useContext(ChatContext);
   if (context === undefined) {

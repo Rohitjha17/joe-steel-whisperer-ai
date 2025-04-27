@@ -1,7 +1,6 @@
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
 
 @layer base {
   :root {
@@ -82,17 +81,24 @@
     --sidebar-border: 0 0% 30%;
     --sidebar-ring: 0 0% 80%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
 
+  html,
   body {
-    @apply bg-background text-foreground;
+    @apply h-full antialiased;
   }
-  
+
+  body {
+    @apply bg-background text-foreground min-h-screen;
+  }
+
+  #root {
+    @apply h-full;
+  }
+
   /* Custom scrollbar for the chat area */
   ::-webkit-scrollbar {
     width: 8px;

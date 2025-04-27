@@ -1,11 +1,10 @@
-
 import React from "react";
-import { useChat } from "@/context/ChatContext";
+import { useChat } from "../context/ChatContext";
 import { ChatWindow } from "./chat/ChatWindow";
 import { ChatInput } from "./chat/ChatInput";
 import { ApiKeyInput } from "./ApiKeyInput";
 import { JoeAvatar } from "./chat/JoeAvatar";
-import { Button } from "@/components/ui/button";
+import { Button } from "./ui/button";
 import { Trash2 } from "lucide-react";
 
 interface SteelChatbotProps {
@@ -13,33 +12,29 @@ interface SteelChatbotProps {
 }
 
 export function SteelChatbot({ minimalSidebar }: SteelChatbotProps = {}) {
-  const { state, sendMessage, clearChat } = useChat();
+  const { messages, isLoading, sendMessage, clearChat, isSpeaking } = useChat();
 
   return (
     <div className="flex h-[95vh] w-full overflow-hidden bg-white">
       {/* Avatar Left Side: 75% (Large phone display) */}
-      <div className="w-[75%] flex flex-col items-center justify-center bg-[#18191C] transition-colors duration-500">
+      <div className="w-[75%] flex flex-col items-center justify-center bg-white transition-colors duration-500">
         <div className="flex flex-col items-center justify-center h-full w-full">
           {/* GIANT Phone */}
           <div
-            className="relative flex flex-col items-center justify-center bg-black shadow-2xl border-4 border-[#222] rounded-[2.75rem] px-2 py-2"
+            className="relative flex flex-col items-center justify-center bg-black shadow-xl rounded-[2rem] overflow-hidden"
             style={{
-              width: "calc(100vw * 0.65)", // Large width, fills the section nearly edge to edge, responsive
-              maxWidth: "890px",
-              height: "calc(100vh * 0.84)",
+              width: "calc(100vw * 0.70)",
+              maxWidth: "920px",
+              height: "calc(100vh * 0.88)",
               minHeight: 0,
-              boxShadow:
-                "0 12px 64px 10px rgba(0,0,0,0.45), 0 3px 16px 0 rgba(0,0,0,0.15)",
               background: "linear-gradient(140deg, #222 82%, #31323a 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              padding: "0px",
             }}
           >
             {/* Fake notch */}
-            <div className="w-32 h-3 bg-[#222b] rounded-b-xl mx-auto mt-3 mb-4" />
+            <div className="w-32 h-2 bg-[#222b] rounded-b-xl mx-auto mt-2 mb-2" />
             {/* JoeAvatar fills below notch */}
-            <JoeAvatar />
+            <JoeAvatar isSpeaking={isSpeaking} />
           </div>
           <div className="flex items-center gap-3 mt-8">
             <ApiKeyInput />
@@ -59,10 +54,10 @@ export function SteelChatbot({ minimalSidebar }: SteelChatbotProps = {}) {
       {/* Chat Right Side: 25% */}
       <div className="w-[25%] flex flex-col bg-white text-black border-l border-black min-h-0 h-full">
         <div className="flex-1 flex flex-col justify-end overflow-y-auto" style={{ minHeight: 0 }}>
-          <ChatWindow messages={state.messages} isLoading={state.isLoading} />
+          <ChatWindow messages={messages} isLoading={isLoading} />
         </div>
         <div className="p-5 border-t border-black bg-white" style={{ minHeight: "110px" }}>
-          <ChatInput onSendMessage={sendMessage} isLoading={state.isLoading} />
+          <ChatInput onSendMessage={sendMessage} isLoading={isLoading} />
         </div>
       </div>
     </div>
